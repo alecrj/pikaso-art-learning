@@ -1,4 +1,4 @@
-// app/(tabs)/gallery.tsx - COMPLETE COMMERCIAL REPLACEMENT
+// app/(tabs)/gallery.tsx - COMPLETE COMMERCIAL REPLACEMENT WITH FIX
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -38,7 +38,6 @@ export default function GalleryTab() {
 
       switch (filter) {
         case 'liked':
-          // ✅ FIXED: Safe property access with optional chaining
           filteredArtworks = filteredArtworks.filter(artwork => {
             const hasLikes = artwork.stats?.likes && artwork.stats.likes > 0;
             return hasLikes;
@@ -50,7 +49,6 @@ export default function GalleryTab() {
             .slice(0, 20);
           break;
         default:
-          // Keep all artworks
           break;
       }
 
@@ -70,10 +68,7 @@ export default function GalleryTab() {
 
   const handleArtworkPress = async (artwork: Artwork) => {
     try {
-      // ✅ FIXED: Safe increment with proper initialization
       await portfolioManager.incrementArtworkViews(artwork.id);
-      
-      // Navigate to artwork detail (implement navigation as needed)
       console.log('Opening artwork:', artwork.title);
     } catch (error) {
       console.error('Failed to open artwork:', error);
@@ -82,8 +77,9 @@ export default function GalleryTab() {
 
   const handleLikePress = async (artwork: Artwork) => {
     try {
+      // ✅ FIXED: likeArtwork now uses smart user context detection
+      // No need to pass userId - it will automatically use current user
       await portfolioManager.likeArtwork(artwork.id);
-      // Refresh artworks to show updated like count
       loadArtworks();
     } catch (error) {
       console.error('Failed to like artwork:', error);
@@ -91,7 +87,6 @@ export default function GalleryTab() {
   };
 
   const renderArtworkCard = ({ item: artwork }: { item: Artwork }) => {
-    // ✅ FIXED: Safe property access with fallbacks
     const likesCount = artwork.stats?.likes || 0;
     const viewsCount = artwork.stats?.views || 0;
     const commentsCount = artwork.stats?.comments || 0;
@@ -106,7 +101,6 @@ export default function GalleryTab() {
         style={[styles.artworkCard, { width: cardWidth }]}
         onPress={() => handleArtworkPress(artwork)}
       >
-        {/* Artwork Image */}
         <View style={styles.artworkImageContainer}>
           {artwork.imageUrl || artwork.thumbnailUrl ? (
             <Image 
@@ -119,43 +113,32 @@ export default function GalleryTab() {
               <Text style={styles.placeholderText}>🎨</Text>
             </View>
           )}
-          
-          {/* Like Button */}
+
           <TouchableOpacity 
             style={styles.likeButton}
             onPress={() => handleLikePress(artwork)}
           >
-            <Text style={[styles.likeIcon, { color: likesCount > 0 ? '#ff4757' : '#ccc' }]}>
-              ♥
-            </Text>
+            <Text style={[styles.likeIcon, { color: likesCount > 0 ? '#ff4757' : '#ccc' }]}>♥</Text>
           </TouchableOpacity>
 
-          {/* Featured Badge */}
           {artwork.featured && (
             <View style={styles.featuredBadge}>
               <Text style={styles.featuredText}>⭐</Text>
             </View>
           )}
         </View>
-        
-        {/* Artwork Info */}
+
         <View style={styles.artworkInfo}>
-          <Text style={styles.artworkTitle} numberOfLines={1}>
-            {artwork.title}
-          </Text>
-          
-          {/* Stats Row */}
+          <Text style={styles.artworkTitle} numberOfLines={1}>{artwork.title}</Text>
           <View style={styles.artworkStats}>
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>{likesCount}</Text>
               <Text style={styles.statLabel}>likes</Text>
             </View>
-            
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>{viewsCount}</Text>
               <Text style={styles.statLabel}>views</Text>
             </View>
-            
             {commentsCount > 0 && (
               <View style={styles.statItem}>
                 <Text style={styles.statNumber}>{commentsCount}</Text>
@@ -163,21 +146,12 @@ export default function GalleryTab() {
               </View>
             )}
           </View>
-
-          {/* ✅ FIXED: Safe metadata display */}
           {drawingTime > 0 && (
-            <Text style={styles.artworkMeta}>
-              ⏱️ {Math.round(drawingTime / 60000)}min • 🎨 {strokeCount} strokes
-            </Text>
+            <Text style={styles.artworkMeta}>⏱️ {Math.round(drawingTime / 60000)}min • 🎨 {strokeCount} strokes</Text>
           )}
-
           {layersUsed > 1 && (
-            <Text style={styles.artworkMeta}>
-              📐 {layersUsed} layers
-            </Text>
+            <Text style={styles.artworkMeta}>📐 {layersUsed} layers</Text>
           )}
-
-          {/* Tags */}
           {artwork.tags && artwork.tags.length > 0 && (
             <View style={styles.tagContainer}>
               {artwork.tags.slice(0, 2).map((tag, index) => (
@@ -190,11 +164,7 @@ export default function GalleryTab() {
               )}
             </View>
           )}
-
-          {/* Creation Date */}
-          <Text style={styles.creationDate}>
-            {new Date(artwork.createdAt).toLocaleDateString()}
-          </Text>
+          <Text style={styles.creationDate}>{new Date(artwork.createdAt).toLocaleDateString()}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -202,16 +172,10 @@ export default function GalleryTab() {
 
   const renderFilterButton = (filterType: 'all' | 'liked' | 'recent', label: string, icon: string) => (
     <TouchableOpacity
-      style={[
-        styles.filterButton,
-        filter === filterType && styles.activeFilter
-      ]}
+      style={[styles.filterButton, filter === filterType && styles.activeFilter]}
       onPress={() => setFilter(filterType)}
     >
-      <Text style={[
-        styles.filterText,
-        filter === filterType && styles.activeFilterText
-      ]}>
+      <Text style={[styles.filterText, filter === filterType && styles.activeFilterText]}>
         {icon} {label}
       </Text>
     </TouchableOpacity>
@@ -221,12 +185,11 @@ export default function GalleryTab() {
     const totalLikes = artworks.reduce((sum, artwork) => sum + (artwork.stats?.likes || 0), 0);
     const totalViews = artworks.reduce((sum, artwork) => sum + (artwork.stats?.views || 0), 0);
     const totalTime = artworks.reduce((sum, artwork) => sum + (artwork.metadata?.drawingTime || 0), 0);
-    
     return {
       totalArtworks: artworks.length,
       totalLikes,
       totalViews,
-      totalHours: Math.round(totalTime / 3600000), // Convert to hours
+      totalHours: Math.round(totalTime / 3600000),
     };
   };
 
@@ -243,14 +206,9 @@ export default function GalleryTab() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>🎨 Gallery</Text>
-        <Text style={styles.headerSubtitle}>
-          Your creative journey
-        </Text>
-        
-        {/* Metrics */}
+        <Text style={styles.headerSubtitle}>Your creative journey</Text>
         {artworks.length > 0 && (
           <View style={styles.metricsContainer}>
             <View style={styles.metricItem}>
@@ -271,16 +229,12 @@ export default function GalleryTab() {
             </View>
           </View>
         )}
-        
-        {/* Filter Buttons */}
         <View style={styles.filterContainer}>
           {renderFilterButton('all', 'All', '🎨')}
           {renderFilterButton('recent', 'Recent', '🕒')}
           {renderFilterButton('liked', 'Liked', '❤️')}
         </View>
       </View>
-
-      {/* Gallery Grid */}
       <FlatList
         data={artworks}
         renderItem={renderArtworkCard}
@@ -293,29 +247,22 @@ export default function GalleryTab() {
         }
         ListEmptyComponent={() => (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>
-              {filter === 'liked' ? '💔' : '🎨'}
-            </Text>
+            <Text style={styles.emptyIcon}>{filter === 'liked' ? '💔' : '🎨'}</Text>
             <Text style={styles.emptyText}>
               {filter === 'liked' 
                 ? 'No liked artworks yet'
                 : filter === 'recent'
                 ? 'No recent artworks'
-                : 'No artworks in your gallery yet'
-              }
+                : 'No artworks in your gallery yet'}
             </Text>
             <Text style={styles.emptySubtext}>
               {filter === 'liked'
                 ? 'Like some artworks to see them here!'
-                : 'Create your first artwork to get started!'
-              }
+                : 'Create your first artwork to get started!'}
             </Text>
-            
             {filter !== 'liked' && (
               <TouchableOpacity style={styles.createButton}>
-                <Text style={styles.createButtonText}>
-                  ✨ Create Artwork
-                </Text>
+                <Text style={styles.createButtonText}>✨ Create Artwork</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -324,6 +271,10 @@ export default function GalleryTab() {
     </SafeAreaView>
   );
 }
+
+// Styles remain unchanged in your original snippet
+// You can paste your existing styles block below this
+
 
 const styles = StyleSheet.create({
   container: {

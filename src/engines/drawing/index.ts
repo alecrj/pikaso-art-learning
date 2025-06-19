@@ -1,8 +1,5 @@
-// src/engines/drawing/index.ts - PRODUCTION GRADE FINAL FIXED VERSION
-/**
- * Drawing Engine Public API
- * FIXED: All duplicate exports and type conflicts resolved
- */
+// =================== src/engines/drawing/index.ts ===================
+// FIXED: Complete drawing engine exports with proper typing
 
 // ===== CORE ENGINES =====
 export { valkyrieEngine, ValkyrieEngine } from './ValkyrieEngine';
@@ -28,7 +25,6 @@ export interface ProfessionalCanvasProps {
 }
 
 // ===== COMPATIBILITY LAYER =====
-// FIXED: Re-export specific items from SkiaCompatibility to avoid conflicts
 export {
   CompatSkia,
   DrawingUtils,
@@ -37,15 +33,13 @@ export {
   PathEffect,
 } from './SkiaCompatibility';
 
-// Re-export specific Skia compatibility types
 export type {
   TouchInfo,
   ExtendedTouchInfo,
   TileModeType,
 } from './SkiaCompatibility';
 
-// ===== DRAWING TYPES - SELECTIVE EXPORT =====
-// FIXED: Only export types that actually exist in drawing.ts
+// ===== DRAWING TYPES =====
 export type {
   Point,
   Color,
@@ -54,8 +48,6 @@ export type {
   Brush,
   BrushSettings,
   BrushCategory,
-  // FIXED: Remove types that don't exist in drawing.ts - use from index.ts instead
-  // DrawingTool, DrawingMode, DrawingStats, HistoryEntry, DrawingState - these are in types/index.ts
   Transform,
   GestureType,
   CanvasState,
@@ -69,11 +61,8 @@ export type {
   LayerType,
   LayerTransform,
   LayerEffect,
-  // Note: BlendMode excluded to prevent conflicts with Skia's BlendMode
-  // Use the BlendMode from drawing types by importing directly from types/drawing
 } from '../../types/drawing';
 
-// FIXED: Export types from index.ts that are used by canvas
 export type {
   DrawingTool,
   DrawingMode,
@@ -82,3 +71,142 @@ export type {
   DrawingState,
   CanvasSettings,
 } from '../../types/index';
+
+// ===== MAIN DRAWING ENGINE =====
+// FIXED: Create a unified drawing engine interface
+class DrawingEngine {
+  private static instance: DrawingEngine;
+
+  private constructor() {}
+
+  public static getInstance(): DrawingEngine {
+    if (!DrawingEngine.instance) {
+      DrawingEngine.instance = new DrawingEngine();
+    }
+    return DrawingEngine.instance;
+  }
+
+  public async initialize(): Promise<void> {
+    try {
+      // Initialize all drawing subsystems
+      console.log('🎨 Drawing Engine: Initializing subsystems...');
+      
+      // The individual engines are already initialized as singletons
+      // This method provides a centralized initialization point
+      
+      console.log('🎨 Drawing Engine: All subsystems ready');
+    } catch (error) {
+      console.error('Failed to initialize drawing engine:', error);
+      throw error;
+    }
+  }
+
+  public isReady(): boolean {
+    return !!(valkyrieEngine && brushEngine && layerManager);
+  }
+}
+
+export const drawingEngine = DrawingEngine.getInstance();
+
+// =================== src/engines/user/index.ts ===================
+// FIXED: Complete user engine exports
+
+export { ProfileSystem } from './ProfileSystem';
+export { ProgressionSystem } from './ProgressionSystem';
+export { PortfolioManager } from './PortfolioManager';
+
+import { ProfileSystem } from './ProfileSystem';
+import { ProgressionSystem } from './ProgressionSystem';
+import { PortfolioManager } from './PortfolioManager';
+
+export const profileSystem = ProfileSystem.getInstance();
+export const progressionSystem = ProgressionSystem.getInstance();
+export const portfolioManager = PortfolioManager.getInstance();
+
+// ===== MAIN USER ENGINE =====
+class UserEngine {
+  private static instance: UserEngine;
+
+  private constructor() {}
+
+  public static getInstance(): UserEngine {
+    if (!UserEngine.instance) {
+      UserEngine.instance = new UserEngine();
+    }
+    return UserEngine.instance;
+  }
+
+  public async initialize(): Promise<void> {
+    try {
+      console.log('👤 User Engine: Initializing systems...');
+      
+      // Initialize all user subsystems
+      // The individual systems are already initialized as singletons
+      
+      console.log('👤 User Engine: All systems ready');
+    } catch (error) {
+      console.error('Failed to initialize user engine:', error);
+      throw error;
+    }
+  }
+
+  public isReady(): boolean {
+    return !!(profileSystem && progressionSystem && portfolioManager);
+  }
+}
+
+export const userEngine = UserEngine.getInstance();
+
+export async function initializeUserEngine(): Promise<void> {
+  return userEngine.initialize();
+}
+
+// =================== src/engines/community/index.ts ===================
+// FIXED: Complete community engine exports
+
+export { SocialEngine } from './SocialEngine';
+export { ChallengeSystem } from './ChallengeSystem';
+
+import { SocialEngine } from './SocialEngine';
+import { ChallengeSystem } from './ChallengeSystem';
+
+export const socialEngine = SocialEngine.getInstance();
+export const challengeSystem = ChallengeSystem.getInstance();
+
+// ===== MAIN COMMUNITY ENGINE =====
+class CommunityEngine {
+  private static instance: CommunityEngine;
+
+  private constructor() {}
+
+  public static getInstance(): CommunityEngine {
+    if (!CommunityEngine.instance) {
+      CommunityEngine.instance = new CommunityEngine();
+    }
+    return CommunityEngine.instance;
+  }
+
+  public async initialize(): Promise<void> {
+    try {
+      console.log('🌍 Community Engine: Initializing systems...');
+      
+      // Initialize all community subsystems
+      await challengeSystem.loadChallenges();
+      
+      console.log('🌍 Community Engine: All systems ready');
+    } catch (error) {
+      console.error('Failed to initialize community engine:', error);
+      throw error;
+    }
+  }
+
+  public isReady(): boolean {
+    return !!(socialEngine && challengeSystem);
+  }
+}
+
+export const communityEngine = CommunityEngine.getInstance();
+
+export async function initializeCommunityEngine(): Promise<void> {
+  return communityEngine.initialize();
+}

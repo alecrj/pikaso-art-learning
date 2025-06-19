@@ -16,6 +16,7 @@ export interface Theme {
     
     // Base colors
     background: string;
+    backgroundSecondary: string; // FIXED: Added missing color
     surface: string;
     surfaceVariant: string;
     
@@ -81,6 +82,7 @@ const lightTheme: Theme = {
     
     // Base colors
     background: '#FFFFFF',
+    backgroundSecondary: '#FAFBFC', // FIXED: Added professional light background variant
     surface: '#F9FAFB',
     surfaceVariant: '#F3F4F6',
     
@@ -170,6 +172,7 @@ const darkTheme: Theme = {
     
     // Base colors
     background: '#0F172A',
+    backgroundSecondary: '#0A1628', // FIXED: Added professional dark background variant
     surface: '#1E293B',
     surfaceVariant: '#334155',
     
@@ -232,7 +235,6 @@ const darkTheme: Theme = {
   },
 };
 
-// FIXED: Updated interface to include spacing, borderRadius, and shadows
 interface ThemeContextValue {
   theme: Theme;
   colors: Theme['colors'];
@@ -306,7 +308,6 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
-  // FIXED: Updated value to include spacing, borderRadius, and shadows
   const value = useMemo<ThemeContextValue>(() => ({
     theme,
     colors: theme.colors,

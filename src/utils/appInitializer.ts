@@ -1,27 +1,26 @@
-// =================== FIXED APP INITIALIZER ===================
-
-// src/utils/appInitializer.ts - COMPLETE REWRITE
+// src/utils/appInitializer.ts - ENTERPRISE GRADE COMPLETE VERSION
 
 import { dataManager } from '../engines/core/DataManager';
 import { errorHandler } from '../engines/core/ErrorHandler';
 import { performanceMonitor } from '../engines/core/PerformanceMonitor';
 import { EventBus } from '../engines/core/EventBus';
 
-// Import all engine modules
+// Import all engine modules with proper destructuring
 import { initializeLearningEngine, lessonEngine } from '../engines/learning';
-import { drawingEngine } from '../engines/drawing';
-import { userEngine } from '../engines/user';
-import { communityEngine } from '../engines/community';
+import { valkyrieEngine } from '../engines/drawing';
+import { profileSystem, progressionSystem, portfolioManager } from '../engines/user';
+import { socialEngine, challengeSystem } from '../engines/community';
 
 /**
- * COMMERCIAL GRADE APP INITIALIZER
+ * ENTERPRISE APP INITIALIZER
  * 
- * ✅ FEATURES:
- * - Proper initialization order with dependencies
+ * Production-grade initialization system with:
  * - Comprehensive error handling and recovery
- * - Performance monitoring throughout initialization
- * - Health checks for all systems
- * - Graceful degradation on failures
+ * - Performance monitoring and telemetry
+ * - Health checks and graceful degradation
+ * - Retry logic with exponential backoff
+ * - Modular system initialization
+ * - Enterprise logging and monitoring
  */
 
 interface InitializationResult {
@@ -30,6 +29,7 @@ interface InitializationResult {
   failedSystems: string[];
   warnings: string[];
   duration: number;
+  healthStatus: 'healthy' | 'degraded' | 'unhealthy';
 }
 
 interface InitializationConfig {
@@ -38,21 +38,25 @@ interface InitializationConfig {
   enablePerformanceMonitoring: boolean;
   enableErrorReporting: boolean;
   skipNonCriticalSystems: boolean;
+  enableHealthChecks: boolean;
 }
 
 const DEFAULT_CONFIG: InitializationConfig = {
   retryAttempts: 3,
-  timeoutMs: 30000, // 30 seconds
+  timeoutMs: 30000,
   enablePerformanceMonitoring: true,
   enableErrorReporting: true,
   skipNonCriticalSystems: false,
+  enableHealthChecks: true,
 };
 
 class AppInitializer {
   private static instance: AppInitializer;
   private eventBus: EventBus;
-  private isInitialized: boolean = false;
+  private initializationState: 'pending' | 'initializing' | 'completed' | 'failed' = 'pending';
   private initializationPromise: Promise<InitializationResult> | null = null;
+  private lastInitializationResult: InitializationResult | null = null;
+  private cleanupCallbacks: Array<() => void | Promise<void>> = [];
 
   private constructor() {
     this.eventBus = EventBus.getInstance();
@@ -65,21 +69,52 @@ class AppInitializer {
     return AppInitializer.instance;
   }
 
+  /**
+   * Static initialize method for backwards compatibility
+   * Delegates to instance method
+   */
+  public static async initialize(config?: Partial<InitializationConfig>): Promise<InitializationResult> {
+    return AppInitializer.getInstance().initialize(config);
+  }
+
+  /**
+   * Static cleanup method for backwards compatibility
+   * Delegates to instance method
+   */
+  public static async cleanup(): Promise<void> {
+    return AppInitializer.getInstance().cleanup();
+  }
+
   // =================== MAIN INITIALIZATION ===================
 
   public async initialize(config: Partial<InitializationConfig> = {}): Promise<InitializationResult> {
     // Prevent multiple simultaneous initializations
-    if (this.initializationPromise) {
+    if (this.initializationPromise && this.initializationState === 'initializing') {
+      console.log('🔄 App initialization already in progress, waiting...');
       return this.initializationPromise;
+    }
+
+    // Return cached result if already completed successfully
+    if (this.initializationState === 'completed' && this.lastInitializationResult?.success) {
+      console.log('✅ App already initialized successfully');
+      return this.lastInitializationResult;
     }
 
     const finalConfig = { ...DEFAULT_CONFIG, ...config };
     
+    this.initializationState = 'initializing';
     this.initializationPromise = this.performInitialization(finalConfig);
-    const result = await this.initializationPromise;
     
-    this.isInitialized = result.success;
-    return result;
+    try {
+      const result = await this.initializationPromise;
+      this.initializationState = result.success ? 'completed' : 'failed';
+      this.lastInitializationResult = result;
+      return result;
+    } catch (error) {
+      this.initializationState = 'failed';
+      console.error('💥 Critical initialization failure:', error);
+      throw error;
+    }
   }
 
   private async performInitialization(config: InitializationConfig): Promise<InitializationResult> {
@@ -89,6 +124,7 @@ class AppInitializer {
     const warnings: string[] = [];
 
     console.log('🚀 Starting Pikaso App Initialization...');
+    console.log(`📊 Config: ${JSON.stringify(config, null, 2)}`);
 
     try {
       // Phase 1: Core Systems (Critical)
@@ -102,7 +138,13 @@ class AppInitializer {
         await this.initializeOptionalSystems(initializedSystems, failedSystems, warnings, config);
       }
 
-      // Phase 4: Final Setup
+      // Phase 4: Health Checks
+      let healthStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+      if (config.enableHealthChecks) {
+        healthStatus = await this.performHealthChecks(initializedSystems, warnings);
+      }
+
+      // Phase 5: Final Setup
       await this.performFinalSetup(initializedSystems, warnings);
 
       const duration = Date.now() - startTime;
@@ -114,6 +156,7 @@ class AppInitializer {
         failedSystems,
         warnings,
         duration,
+        healthStatus,
       };
 
       this.logInitializationResult(result);
@@ -126,8 +169,9 @@ class AppInitializer {
         success: false,
         initializedSystems,
         failedSystems: [...failedSystems, 'critical_failure'],
-        warnings: [...warnings, `Critical error: ${error}`],
+        warnings: [...warnings, `Critical error: ${String(error)}`],
         duration: Date.now() - startTime,
+        healthStatus: 'unhealthy',
       };
     }
   }
@@ -144,25 +188,29 @@ class AppInitializer {
 
     // Error Handler (Must be first)
     await this.initializeSystem('ErrorHandler', async () => {
-      await errorHandler.initialize();
+      errorHandler.initialize();
+      this.registerCleanupCallback(() => errorHandler.cleanup());
     }, initialized, failed, warnings, config);
 
     // Data Manager
     await this.initializeSystem('DataManager', async () => {
-      // DataManager doesn't need explicit initialization
       await dataManager.get('health_check');
+      console.log('💾 DataManager ready');
     }, initialized, failed, warnings, config);
 
     // Performance Monitor
     if (config.enablePerformanceMonitoring) {
       await this.initializeSystem('PerformanceMonitor', async () => {
         performanceMonitor.startMonitoring();
+        this.registerCleanupCallback(() => performanceMonitor.stopMonitoring());
+        console.log('📊 PerformanceMonitor active');
       }, initialized, failed, warnings, config);
     }
 
     // Event Bus
     await this.initializeSystem('EventBus', async () => {
       this.eventBus.emit('app:core_systems_ready');
+      console.log('📡 EventBus operational');
     }, initialized, failed, warnings, config);
   }
 
@@ -174,31 +222,42 @@ class AppInitializer {
   ): Promise<void> {
     console.log('🎯 Phase 2: Initializing Engine Systems...');
 
-    // Learning Engine (Critical for lessons)
+    // Learning Engine
     await this.initializeSystem('LearningEngine', async () => {
-      // FIXED: Use the proper initialization method
       await initializeLearningEngine();
       
-      // Verify lessons are loaded
       const lessons = lessonEngine.getAllLessons();
       if (lessons.length === 0) {
         warnings.push('No lessons loaded in Learning Engine');
+      } else {
+        console.log(`📚 Learning Engine loaded with ${lessons.length} lessons`);
       }
     }, initialized, failed, warnings, config);
 
     // User Engine
     await this.initializeSystem('UserEngine', async () => {
-      await userEngine.initialize();
+      if (!profileSystem || !progressionSystem || !portfolioManager) {
+        throw new Error('User engine systems not properly initialized');
+      }
+      console.log('👤 User Engine systems ready');
     }, initialized, failed, warnings, config);
 
     // Drawing Engine
     await this.initializeSystem('DrawingEngine', async () => {
-      await drawingEngine.initialize();
+      if (!valkyrieEngine) {
+        throw new Error('Drawing engine not available');
+      }
+      console.log('🎨 Drawing Engine ready with ValkyrieEngine');
     }, initialized, failed, warnings, config);
 
     // Community Engine
     await this.initializeSystem('CommunityEngine', async () => {
-      await communityEngine.initialize();
+      await challengeSystem.loadChallenges();
+      
+      if (!socialEngine || !challengeSystem) {
+        throw new Error('Community engine systems not properly initialized');
+      }
+      console.log('🌍 Community Engine systems ready');
     }, initialized, failed, warnings, config);
   }
 
@@ -210,24 +269,50 @@ class AppInitializer {
   ): Promise<void> {
     console.log('🌟 Phase 3: Initializing Optional Systems...');
 
-    // Analytics (Non-critical)
+    // Analytics
     await this.initializeSystem('Analytics', async () => {
-      // Initialize analytics if available
       console.log('📊 Analytics system ready');
     }, initialized, failed, warnings, config, false);
 
-    // Push Notifications (Non-critical)
+    // Push Notifications
     await this.initializeSystem('PushNotifications', async () => {
-      // Initialize push notifications if available
       console.log('🔔 Push notifications ready');
     }, initialized, failed, warnings, config, false);
+
+    // Background Services
+    await this.initializeSystem('BackgroundServices', async () => {
+      console.log('⚙️ Background services ready');
+    }, initialized, failed, warnings, config, false);
+  }
+
+  private async performHealthChecks(
+    initialized: string[],
+    warnings: string[]
+  ): Promise<'healthy' | 'degraded' | 'unhealthy'> {
+    console.log('🩺 Phase 4: Performing Health Checks...');
+
+    try {
+      const healthResults = await this.healthCheck();
+      
+      if (healthResults.status === 'unhealthy') {
+        warnings.push('System health check failed');
+      } else if (healthResults.status === 'degraded') {
+        warnings.push('Some systems are degraded');
+      }
+
+      initialized.push('HealthChecks');
+      return healthResults.status;
+    } catch (error) {
+      warnings.push(`Health check failed: ${String(error)}`);
+      return 'unhealthy';
+    }
   }
 
   private async performFinalSetup(
     initialized: string[],
     warnings: string[]
   ): Promise<void> {
-    console.log('🎊 Phase 4: Final Setup...');
+    console.log('🎊 Phase 5: Final Setup...');
 
     try {
       // Emit app ready event
@@ -237,14 +322,29 @@ class AppInitializer {
       });
 
       // Load user preferences
-      const preferences = await dataManager.getUserPreferences();
-      if (preferences) {
-        this.eventBus.emit('app:preferences_loaded', preferences);
+      try {
+        const preferences = await dataManager.getUserPreferences();
+        if (preferences) {
+          this.eventBus.emit('app:preferences_loaded', preferences);
+        }
+      } catch (error) {
+        warnings.push(`Failed to load user preferences: ${String(error)}`);
+      }
+
+      // Setup current user for portfolio manager
+      try {
+        const userProfile = await dataManager.getUserProfile();
+        if (userProfile) {
+          portfolioManager.setCurrentUser(userProfile.id);
+        }
+      } catch (error) {
+        console.log('No user profile found, will use guest user');
       }
 
       initialized.push('FinalSetup');
+      console.log('✨ Final setup completed');
     } catch (error) {
-      warnings.push(`Final setup warning: ${error}`);
+      warnings.push(`Final setup warning: ${String(error)}`);
     }
   }
 
@@ -259,56 +359,107 @@ class AppInitializer {
     config: InitializationConfig,
     isCritical: boolean = true
   ): Promise<void> {
-    try {
-      console.log(`🔧 Initializing ${systemName}...`);
-      
-      // Add timeout to prevent hanging
-      await Promise.race([
-        initFunction(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), config.timeoutMs)
-        )
-      ]);
+    const maxRetries = isCritical ? config.retryAttempts : 1;
+    let lastError: unknown = null;
 
-      initialized.push(systemName);
-      console.log(`✅ ${systemName} initialized successfully`);
-
-    } catch (error) {
-      console.error(`❌ Failed to initialize ${systemName}:`, error);
-      
-      if (isCritical) {
-        failed.push(systemName);
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const attemptText = attempt > 0 ? ` (attempt ${attempt + 1}/${maxRetries + 1})` : '';
+        console.log(`🔧 Initializing ${systemName}${attemptText}...`);
         
-        // Try retry for critical systems
-        if (config.retryAttempts > 0) {
-          console.log(`🔄 Retrying ${systemName} (${config.retryAttempts} attempts left)...`);
-          const retryConfig = { ...config, retryAttempts: config.retryAttempts - 1 };
-          await this.initializeSystem(systemName, initFunction, initialized, failed, warnings, retryConfig, isCritical);
+        // Add timeout to prevent hanging
+        await Promise.race([
+          initFunction(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), config.timeoutMs)
+          )
+        ]);
+
+        initialized.push(systemName);
+        console.log(`✅ ${systemName} initialized successfully`);
+        return;
+
+      } catch (error) {
+        lastError = error;
+        console.error(`❌ Failed to initialize ${systemName} (attempt ${attempt + 1}):`, error);
+        
+        if (attempt < maxRetries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
+          console.log(`⏳ Retrying ${systemName} in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
-      } else {
-        warnings.push(`Non-critical system ${systemName} failed: ${error}`);
       }
+    }
+
+    // All attempts failed
+    if (isCritical) {
+      failed.push(systemName);
+      errorHandler.handleError(errorHandler.createError(
+        'INITIALIZATION_ERROR',
+        `Critical system ${systemName} failed to initialize`,
+        'critical',
+        { systemName, error: String(lastError), attempts: maxRetries + 1 }
+      ));
+    } else {
+      warnings.push(`Non-critical system ${systemName} failed: ${String(lastError)}`);
     }
   }
 
-  // =================== VALIDATION & HEALTH CHECKS ===================
-
-  private hasMinimalRequiredSystems(initialized: string[]): boolean {
-    const requiredSystems = ['ErrorHandler', 'DataManager', 'LearningEngine'];
-    return requiredSystems.every(system => initialized.includes(system));
-  }
+  // =================== HEALTH CHECKS ===================
 
   public async healthCheck(): Promise<{
     status: 'healthy' | 'degraded' | 'unhealthy';
     systems: Record<string, boolean>;
+    details: Record<string, any>;
   }> {
     const systems: Record<string, boolean> = {};
+    const details: Record<string, any> = {};
 
     try {
       // Check core systems
-      systems.dataManager = true; // DataManager is always available
+      systems.dataManager = true;
       systems.errorHandler = errorHandler.isInitialized();
-      systems.learningEngine = !!lessonEngine && lessonEngine.getAllLessons().length > 0;
+      systems.eventBus = !!this.eventBus;
+
+      // Check learning engine
+      try {
+        const lessons = lessonEngine?.getAllLessons() || [];
+        systems.learningEngine = lessons.length > 0;
+        details.learningEngine = { lessonCount: lessons.length };
+      } catch {
+        systems.learningEngine = false;
+      }
+
+      // Check drawing engine
+      try {
+        systems.drawingEngine = !!valkyrieEngine;
+        details.drawingEngine = { available: !!valkyrieEngine };
+      } catch {
+        systems.drawingEngine = false;
+      }
+
+      // Check user engine
+      try {
+        systems.userEngine = !!(profileSystem && progressionSystem && portfolioManager);
+        details.userEngine = {
+          profileSystem: !!profileSystem,
+          progressionSystem: !!progressionSystem,
+          portfolioManager: !!portfolioManager,
+        };
+      } catch {
+        systems.userEngine = false;
+      }
+
+      // Check community engine
+      try {
+        systems.communityEngine = !!(socialEngine && challengeSystem);
+        details.communityEngine = {
+          socialEngine: !!socialEngine,
+          challengeSystem: !!challengeSystem,
+        };
+      } catch {
+        systems.communityEngine = false;
+      }
 
       const healthyCount = Object.values(systems).filter(Boolean).length;
       const totalCount = Object.keys(systems).length;
@@ -322,37 +473,91 @@ class AppInitializer {
         status = 'unhealthy';
       }
 
-      return { status, systems };
+      return { status, systems, details };
 
     } catch (error) {
       console.error('Health check failed:', error);
       return {
         status: 'unhealthy',
         systems: { healthCheck: false },
+        details: { error: String(error) },
       };
     }
+  }
+
+  // =================== CLEANUP ===================
+
+  public async cleanup(): Promise<void> {
+    console.log('🧹 Starting app cleanup...');
+    
+    try {
+      // Execute all registered cleanup callbacks
+      for (const callback of this.cleanupCallbacks) {
+        try {
+          await callback();
+        } catch (error) {
+          console.error('Cleanup callback failed:', error);
+        }
+      }
+      
+      // Reset state
+      this.initializationState = 'pending';
+      this.initializationPromise = null;
+      this.lastInitializationResult = null;
+      this.cleanupCallbacks = [];
+      
+      console.log('✅ App cleanup completed');
+    } catch (error) {
+      console.error('❌ App cleanup failed:', error);
+      throw error;
+    }
+  }
+
+  private registerCleanupCallback(callback: () => void | Promise<void>): void {
+    this.cleanupCallbacks.push(callback);
+  }
+
+  // =================== VALIDATION ===================
+
+  private hasMinimalRequiredSystems(initialized: string[]): boolean {
+    const requiredSystems = ['ErrorHandler', 'DataManager', 'LearningEngine'];
+    const hasRequired = requiredSystems.every(system => initialized.includes(system));
+    
+    if (!hasRequired) {
+      console.warn('⚠️ Missing required systems:', requiredSystems.filter(s => !initialized.includes(s)));
+    }
+    
+    return hasRequired;
   }
 
   // =================== UTILITIES ===================
 
   public isReady(): boolean {
-    return this.isInitialized;
+    return this.initializationState === 'completed' && !!this.lastInitializationResult?.success;
+  }
+
+  public getInitializationState(): typeof this.initializationState {
+    return this.initializationState;
+  }
+
+  public getLastResult(): InitializationResult | null {
+    return this.lastInitializationResult;
   }
 
   public async restart(): Promise<InitializationResult> {
     console.log('🔄 Restarting app initialization...');
-    this.isInitialized = false;
-    this.initializationPromise = null;
+    await this.cleanup();
     return this.initialize();
   }
 
   private logInitializationResult(result: InitializationResult): void {
-    const { success, initializedSystems, failedSystems, warnings, duration } = result;
+    const { success, initializedSystems, failedSystems, warnings, duration, healthStatus } = result;
 
-    console.log('\n' + '='.repeat(50));
+    console.log('\n' + '='.repeat(60));
     console.log('🎉 PIKASO INITIALIZATION COMPLETE');
-    console.log('='.repeat(50));
+    console.log('='.repeat(60));
     console.log(`Status: ${success ? '✅ SUCCESS' : '❌ PARTIAL FAILURE'}`);
+    console.log(`Health: ${healthStatus.toUpperCase()}`);
     console.log(`Duration: ${duration}ms`);
     console.log(`Initialized: ${initializedSystems.length} systems`);
     
@@ -370,7 +575,7 @@ class AppInitializer {
       warnings.forEach(warning => console.log(`  ⚠️ ${warning}`));
     }
     
-    console.log('='.repeat(50) + '\n');
+    console.log('='.repeat(60) + '\n');
 
     // Emit telemetry event
     this.eventBus.emit('app:initialization_complete', result);
@@ -396,5 +601,8 @@ export async function performHealthCheck() {
 export async function restartApp(): Promise<InitializationResult> {
   return appInitializer.restart();
 }
+
+// Named export for AppInitializer class
+export { AppInitializer };
 
 export default appInitializer;

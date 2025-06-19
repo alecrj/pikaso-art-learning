@@ -1,440 +1,423 @@
-import { User } from '../../types';
-import { dataManager } from '../core/DataManager';
+// src/engines/user/ProfileSystem.ts - ENTERPRISE GRADE PROFILE SYSTEM
+
 import { EventBus } from '../core/EventBus';
+import { dataManager } from '../core/DataManager';
 import { errorHandler } from '../core/ErrorHandler';
 
 /**
- * Profile System - Google-level user management
- * Handles user accounts, profiles, and authentication
+ * PROFESSIONAL PROFILE MANAGEMENT SYSTEM
+ * 
+ * Enterprise features:
+ * - User profile CRUD operations
+ * - Avatar management
+ * - Privacy settings
+ * - Social connections
+ * - Achievement showcase
+ * - Portfolio integration
  */
-export class ProfileSystem {
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  displayName: string;
+  email?: string;
+  avatar?: string;
+  bio?: string;
+  skillLevel: 'beginner' | 'intermediate' | 'advanced' | 'professional';
+  joinedAt: number;
+  lastActiveAt: number;
+  
+  // Social
+  followers: number;
+  following: number;
+  isFollowing?: boolean;
+  
+  // Privacy
+  isPrivate: boolean;
+  showProgress: boolean;
+  showArtwork: boolean;
+  
+  // Stats
+  totalArtworks: number;
+  totalLessons: number;
+  currentStreak: number;
+  longestStreak: number;
+  
+  // Achievements
+  featuredAchievements: string[];
+  totalAchievements: number;
+  
+  // Settings
+  preferences: {
+    language: string;
+    timezone: string;
+    emailNotifications: boolean;
+    pushNotifications: boolean;
+  };
+}
+
+export interface ProfileUpdate {
+  displayName?: string;
+  bio?: string;
+  avatar?: string;
+  skillLevel?: UserProfile['skillLevel'];
+  isPrivate?: boolean;
+  showProgress?: boolean;
+  showArtwork?: boolean;
+  preferences?: Partial<UserProfile['preferences']>;
+}
+
+class ProfileSystem {
   private static instance: ProfileSystem;
-  private currentUser: User | null = null;
-  private eventBus: EventBus = EventBus.getInstance();
-  private isInitialized: boolean = false;
-
-  private constructor() {}
-
+  private eventBus: EventBus;
+  private currentProfile: UserProfile | null = null;
+  private profileCache: Map<string, UserProfile> = new Map();
+  
+  private constructor() {
+    this.eventBus = EventBus.getInstance();
+  }
+  
   public static getInstance(): ProfileSystem {
     if (!ProfileSystem.instance) {
       ProfileSystem.instance = new ProfileSystem();
     }
     return ProfileSystem.instance;
   }
-
-  public async initialize(): Promise<void> {
-    if (this.isInitialized) return;
-    
+  
+  // =================== PROFILE MANAGEMENT ===================
+  
+  public async loadCurrentProfile(): Promise<UserProfile | null> {
     try {
-      // Load saved user profile
-      const savedUser = await dataManager.getUserProfile();
-      if (savedUser) {
-        // Fix date serialization issue
-        this.currentUser = this.deserializeUser(savedUser);
-        this.eventBus.emit('user:loaded', { user: this.currentUser });
+      const profile = await dataManager.getUserProfile();
+      if (profile) {
+        this.currentProfile = profile;
+        this.profileCache.set(profile.id, profile);
+        this.eventBus.emit('profile:loaded', profile);
       }
-      
-      this.isInitialized = true;
-      console.log('ProfileSystem initialized', { hasUser: !!this.currentUser });
+      return profile;
     } catch (error) {
-      errorHandler.handleError(
-        errorHandler.createError('PROFILE_INIT_ERROR', 'Failed to initialize profile system', 'medium', error)
-      );
-    }
-  }
-
-  public async createUser(
-    email: string,
-    username: string,
-    displayName: string
-  ): Promise<User> {
-    try {
-      const now = new Date();
-      const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      const newUser: User = {
-        id: userId,
-        username: username.toLowerCase().replace(/\s+/g, ''),
-        displayName,
-        email,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
-        bio: 'Aspiring artist learning to draw!',
-        following: [],
-        followers: [],
-        isVerified: false,
-        isOnline: true,
-        lastSeenAt: Date.now(),
-        
-        // User progression
-        level: 1,
-        xp: 0,
-        totalXP: 0,
-        streakDays: 0,
-        lastActiveDate: now,
-        createdAt: now,
-        updatedAt: now,
-        
-        // Preferences
-        preferences: {
-          theme: 'auto',
-          notifications: {
-            lessons: true,
-            achievements: true,
-            social: true,
-            challenges: true,
-          },
-          privacy: {
-            profile: 'public',
-            artwork: 'public',
-            progress: 'public',
-          },
-        },
-        
-        // Stats
-        stats: {
-          totalDrawingTime: 0,
-          totalLessonsCompleted: 0,
-          totalArtworksCreated: 0,
-          currentStreak: 0,
-          longestStreak: 0,
-          artworksCreated: 0,
-          artworksShared: 0,
-          challengesCompleted: 0,
-          skillsUnlocked: 0,
-          perfectLessons: 0,
-          lessonsCompleted: 0,
-        },
-        
-        // Achievements
-        achievements: [],
-      };
-      
-      // Save user
-      this.currentUser = newUser;
-      await this.saveUser();
-      
-      this.eventBus.emit('user:created', { user: newUser });
-      console.log('User created successfully:', { userId: newUser.id, displayName });
-      
-      return newUser;
-    } catch (error) {
-      errorHandler.handleError(
-        errorHandler.createError('USER_CREATE_ERROR', 'Failed to create user', 'high', error)
-      );
-      throw error;
-    }
-  }
-
-  public getCurrentUser(): User | null {
-    return this.currentUser;
-  }
-
-  public async updateUser(updates: Partial<User>): Promise<User | null> {
-    if (!this.currentUser) return null;
-    
-    try {
-      this.currentUser = {
-        ...this.currentUser,
-        ...updates,
-        updatedAt: new Date(),
-      };
-      
-      await this.saveUser();
-      this.eventBus.emit('user:updated', { user: this.currentUser });
-      
-      return this.currentUser;
-    } catch (error) {
-      errorHandler.handleError(
-        errorHandler.createError('USER_UPDATE_ERROR', 'Failed to update user', 'medium', error)
-      );
+      errorHandler.handleError(errorHandler.createError(
+        'USER_ERROR',
+        'Failed to load user profile',
+        'medium',
+        { error }
+      ));
       return null;
     }
   }
-
-  public async updateActivity(): Promise<void> {
-    if (!this.currentUser) return;
-    
-    const now = new Date();
-    const lastActive = new Date(this.currentUser.lastActiveDate);
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const lastActiveDay = new Date(lastActive.getFullYear(), lastActive.getMonth(), lastActive.getDate());
-    
-    // Check if it's a new day
-    if (today.getTime() !== lastActiveDay.getTime()) {
-      // Check if streak continues
-      const daysSinceActive = Math.floor((today.getTime() - lastActiveDay.getTime()) / (1000 * 60 * 60 * 24));
+  
+  public async createProfile(data: {
+    username: string;
+    displayName: string;
+    email?: string;
+    skillLevel: UserProfile['skillLevel'];
+  }): Promise<UserProfile> {
+    try {
+      const profile: UserProfile = {
+        id: this.generateUserId(),
+        username: data.username.toLowerCase(),
+        displayName: data.displayName,
+        email: data.email,
+        skillLevel: data.skillLevel,
+        joinedAt: Date.now(),
+        lastActiveAt: Date.now(),
+        
+        followers: 0,
+        following: 0,
+        
+        isPrivate: false,
+        showProgress: true,
+        showArtwork: true,
+        
+        totalArtworks: 0,
+        totalLessons: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        
+        featuredAchievements: [],
+        totalAchievements: 0,
+        
+        preferences: {
+          language: 'en',
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          emailNotifications: true,
+          pushNotifications: true,
+        },
+      };
       
-      if (daysSinceActive === 1) {
-        // Continue streak
-        this.currentUser.streakDays++;
-        this.currentUser.stats.currentStreak++;
-        
-        if (this.currentUser.stats.currentStreak > this.currentUser.stats.longestStreak) {
-          this.currentUser.stats.longestStreak = this.currentUser.stats.currentStreak;
-        }
-        
-        this.eventBus.emit('user:streakContinued', { 
-          streak: this.currentUser.streakDays,
-          isNewRecord: this.currentUser.stats.currentStreak === this.currentUser.stats.longestStreak
-        });
-      } else if (daysSinceActive > 1) {
-        // Streak broken
-        this.currentUser.streakDays = 1;
-        this.currentUser.stats.currentStreak = 1;
-        
-        this.eventBus.emit('user:streakBroken', { 
-          previousStreak: this.currentUser.stats.currentStreak 
-        });
+      await dataManager.saveUserProfile(profile);
+      this.currentProfile = profile;
+      this.profileCache.set(profile.id, profile);
+      
+      this.eventBus.emit('profile:created', profile);
+      return profile;
+      
+    } catch (error) {
+      errorHandler.handleError(errorHandler.createError(
+        'USER_ERROR',
+        'Failed to create user profile',
+        'high',
+        { error, data }
+      ));
+      throw error;
+    }
+  }
+  
+  public async updateProfile(updates: ProfileUpdate): Promise<UserProfile> {
+    if (!this.currentProfile) {
+      throw new Error('No profile loaded');
+    }
+    
+    try {
+      const updatedProfile: UserProfile = {
+        ...this.currentProfile,
+        ...updates,
+        lastActiveAt: Date.now(),
+        preferences: {
+          ...this.currentProfile.preferences,
+          ...updates.preferences,
+        },
+      };
+      
+      await dataManager.saveUserProfile(updatedProfile);
+      this.currentProfile = updatedProfile;
+      this.profileCache.set(updatedProfile.id, updatedProfile);
+      
+      this.eventBus.emit('profile:updated', {
+        profile: updatedProfile,
+        changes: updates,
+      });
+      
+      return updatedProfile;
+      
+    } catch (error) {
+      errorHandler.handleError(errorHandler.createError(
+        'USER_ERROR',
+        'Failed to update user profile',
+        'medium',
+        { error, updates }
+      ));
+      throw error;
+    }
+  }
+  
+  public async getProfile(userId: string): Promise<UserProfile | null> {
+    // Check cache first
+    if (this.profileCache.has(userId)) {
+      return this.profileCache.get(userId)!;
+    }
+    
+    try {
+      // In production, this would fetch from API
+      const profile = await dataManager.get<UserProfile>(`profile_${userId}`);
+      if (profile) {
+        this.profileCache.set(userId, profile);
       }
+      return profile;
+      
+    } catch (error) {
+      errorHandler.handleError(errorHandler.createError(
+        'USER_ERROR',
+        'Failed to fetch user profile',
+        'low',
+        { error, userId }
+      ));
+      return null;
     }
-    
-    this.currentUser.lastActiveDate = now;
-    this.currentUser.lastSeenAt = now.getTime();
-    this.currentUser.isOnline = true;
-    
-    await this.saveUser();
   }
-
-  // FIXED: Updated addXP method signature to match expected usage
-  public async addXP(amount: number, source: string = 'general'): Promise<void> {
-    if (!this.currentUser || amount <= 0) return;
+  
+  // =================== AVATAR MANAGEMENT ===================
+  
+  public async updateAvatar(imageUri: string): Promise<string> {
+    if (!this.currentProfile) {
+      throw new Error('No profile loaded');
+    }
     
     try {
-      const previousLevel = this.currentUser.level;
+      // In production, this would upload to CDN
+      const avatarUrl = await this.uploadAvatar(imageUri);
       
-      this.currentUser.xp += amount;
-      this.currentUser.totalXP += amount;
+      await this.updateProfile({ avatar: avatarUrl });
       
-      // Calculate new level (100 XP per level initially, scaling up)
-      const newLevel = this.calculateLevel(this.currentUser.totalXP);
-      
-      if (newLevel > previousLevel) {
-        this.currentUser.level = newLevel;
-        
-        this.eventBus.emit('user:levelUp', {
-          previousLevel,
-          newLevel,
-          totalXP: this.currentUser.totalXP,
-        });
-      }
-      
-      await this.saveUser();
-      
-      this.eventBus.emit('user:xpGained', {
-        amount,
-        source,
-        totalXP: this.currentUser.totalXP,
-        level: this.currentUser.level,
+      this.eventBus.emit('profile:avatar_updated', {
+        userId: this.currentProfile.id,
+        avatarUrl,
       });
+      
+      return avatarUrl;
+      
     } catch (error) {
-      errorHandler.handleError(
-        errorHandler.createError('XP_ADD_ERROR', 'Failed to add XP', 'low', error)
-      );
+      errorHandler.handleError(errorHandler.createError(
+        'USER_ERROR',
+        'Failed to update avatar',
+        'medium',
+        { error }
+      ));
+      throw error;
     }
   }
-
-  // FIXED: Added missing incrementStat method
-  public async incrementStat(statName: keyof User['stats'], amount: number = 1): Promise<void> {
-    if (!this.currentUser) return;
+  
+  private async uploadAvatar(imageUri: string): Promise<string> {
+    // Mock upload - in production, use CDN
+    return `https://api.pikaso.app/avatars/${Date.now()}.jpg`;
+  }
+  
+  // =================== SOCIAL FEATURES ===================
+  
+  public async followUser(userId: string): Promise<void> {
+    if (!this.currentProfile) {
+      throw new Error('No profile loaded');
+    }
     
     try {
-      // Type-safe stat incrementation
-      const currentValue = this.currentUser.stats[statName] as number;
-      (this.currentUser.stats as any)[statName] = currentValue + amount;
+      // Update following count
+      const updatedProfile = {
+        ...this.currentProfile,
+        following: this.currentProfile.following + 1,
+      };
       
-      await this.saveUser();
+      await dataManager.saveUserProfile(updatedProfile);
+      this.currentProfile = updatedProfile;
       
-      this.eventBus.emit('user:statUpdated', {
-        statName,
-        oldValue: currentValue,
-        newValue: currentValue + amount,
+      // In production, update backend
+      this.eventBus.emit('social:followed', {
+        followerId: this.currentProfile.id,
+        followedId: userId,
       });
+      
     } catch (error) {
-      errorHandler.handleError(
-        errorHandler.createError('STAT_INCREMENT_ERROR', 'Failed to increment stat', 'low', error)
-      );
+      errorHandler.handleError(errorHandler.createError(
+        'COMMUNITY_ERROR',
+        'Failed to follow user',
+        'medium',
+        { error, userId }
+      ));
+      throw error;
     }
   }
-
-  // FIXED: Added missing updateStreak method
-  public async updateStreak(): Promise<void> {
-    if (!this.currentUser) return;
+  
+  public async unfollowUser(userId: string): Promise<void> {
+    if (!this.currentProfile) {
+      throw new Error('No profile loaded');
+    }
     
     try {
-      await this.updateActivity();
+      // Update following count
+      const updatedProfile = {
+        ...this.currentProfile,
+        following: Math.max(0, this.currentProfile.following - 1),
+      };
       
-      // The actual streak logic is handled in updateActivity()
-      // This method is a convenience wrapper
+      await dataManager.saveUserProfile(updatedProfile);
+      this.currentProfile = updatedProfile;
       
-      this.eventBus.emit('user:streakUpdated', {
-        currentStreak: this.currentUser.stats.currentStreak,
-        longestStreak: this.currentUser.stats.longestStreak,
+      // In production, update backend
+      this.eventBus.emit('social:unfollowed', {
+        followerId: this.currentProfile.id,
+        unfollowedId: userId,
       });
+      
     } catch (error) {
-      errorHandler.handleError(
-        errorHandler.createError('STREAK_UPDATE_ERROR', 'Failed to update streak', 'low', error)
-      );
+      errorHandler.handleError(errorHandler.createError(
+        'COMMUNITY_ERROR',
+        'Failed to unfollow user',
+        'medium',
+        { error, userId }
+      ));
+      throw error;
     }
   }
-
-  // FIXED: Added missing getProgressSummary method
-  public getProgressSummary(): {
-    level: number;
-    totalXP: number;
-    xpToNextLevel: number;
-    streakDays: number;
-    achievementsCount: number;
-    lessonsCompleted: number;
-    artworksCreated: number;
-  } | null {
-    if (!this.currentUser) return null;
+  
+  // =================== STATS MANAGEMENT ===================
+  
+  public async updateStats(stats: Partial<{
+    totalArtworks: number;
+    totalLessons: number;
+    currentStreak: number;
+    longestStreak: number;
+    totalAchievements: number;
+  }>): Promise<void> {
+    if (!this.currentProfile) {
+      throw new Error('No profile loaded');
+    }
     
-    return {
-      level: this.currentUser.level,
-      totalXP: this.currentUser.totalXP,
-      xpToNextLevel: this.getXPToNextLevel(),
-      streakDays: this.currentUser.streakDays,
-      achievementsCount: this.currentUser.achievements.length,
-      lessonsCompleted: this.currentUser.stats.totalLessonsCompleted,
-      artworksCreated: this.currentUser.stats.artworksCreated,
-    };
+    try {
+      const updatedProfile = {
+        ...this.currentProfile,
+        ...stats,
+        longestStreak: Math.max(
+          this.currentProfile.longestStreak,
+          stats.currentStreak || this.currentProfile.currentStreak
+        ),
+      };
+      
+      await dataManager.saveUserProfile(updatedProfile);
+      this.currentProfile = updatedProfile;
+      
+      this.eventBus.emit('profile:stats_updated', {
+        userId: this.currentProfile.id,
+        stats,
+      });
+      
+    } catch (error) {
+      errorHandler.handleError(errorHandler.createError(
+        'USER_ERROR',
+        'Failed to update profile stats',
+        'low',
+        { error, stats }
+      ));
+    }
   }
-
-  public async recordAchievement(achievementId: string): Promise<void> {
-    if (!this.currentUser) return;
-    
-    // Check if already has achievement
-    const hasAchievement = this.currentUser.achievements.some(a => a.id === achievementId);
-    if (hasAchievement) return;
-    
-    // This would normally look up achievement details
-    const achievement = {
-      id: achievementId,
-      name: this.getAchievementName(achievementId),
-      description: this.getAchievementDescription(achievementId),
-      icon: '🏆',
-      category: 'milestone' as const,
-      requirements: { type: 'custom', value: 1 },
-      rarity: 'common' as const,
-      xpReward: 50,
-      unlockedAt: Date.now(),
-    };
-    
-    this.currentUser.achievements.push(achievement);
-    
-    // Add XP reward
-    await this.addXP(achievement.xpReward, `achievement:${achievementId}`);
-    
-    await this.saveUser();
-    
-    this.eventBus.emit('user:achievementUnlocked', { achievement });
+  
+  // =================== UTILITIES ===================
+  
+  public getCurrentProfile(): UserProfile | null {
+    return this.currentProfile;
   }
-
+  
+  public isLoggedIn(): boolean {
+    return !!this.currentProfile;
+  }
+  
   public async logout(): Promise<void> {
-    this.currentUser = null;
-    await dataManager.remove('current_user');
-    this.eventBus.emit('user:logout');
+    this.currentProfile = null;
+    this.profileCache.clear();
+    
+    await dataManager.remove('current_user_id');
+    
+    this.eventBus.emit('profile:logged_out');
   }
-
-  // Private methods
-
-  private async saveUser(): Promise<void> {
-    if (!this.currentUser) return;
+  
+  private generateUserId(): string {
+    return `usr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+  
+  public async deleteProfile(): Promise<void> {
+    if (!this.currentProfile) {
+      throw new Error('No profile loaded');
+    }
     
     try {
-      // Serialize user for storage
-      const serializedUser = this.serializeUser(this.currentUser);
-      await dataManager.saveUserProfile(serializedUser);
+      await dataManager.remove(`profile_${this.currentProfile.id}`);
+      await dataManager.remove('current_user_id');
+      
+      const profileId = this.currentProfile.id;
+      this.currentProfile = null;
+      this.profileCache.clear();
+      
+      this.eventBus.emit('profile:deleted', { profileId });
+      
     } catch (error) {
-      errorHandler.handleError(
-        errorHandler.createError('USER_SAVE_ERROR', 'Failed to save user', 'medium', error)
-      );
+      errorHandler.handleError(errorHandler.createError(
+        'USER_ERROR',
+        'Failed to delete profile',
+        'high',
+        { error }
+      ));
+      throw error;
     }
-  }
-
-  private calculateLevel(totalXP: number): number {
-    // Progressive level scaling
-    // Level 1: 0-100 XP
-    // Level 2: 100-300 XP (+200)
-    // Level 3: 300-600 XP (+300)
-    // And so on...
-    
-    let level = 1;
-    let xpRequired = 100;
-    let cumulativeXP = 0;
-    
-    while (totalXP >= cumulativeXP + xpRequired) {
-      cumulativeXP += xpRequired;
-      level++;
-      xpRequired = level * 100;
-    }
-    
-    return level;
-  }
-
-  private serializeUser(user: User): any {
-    return {
-      ...user,
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString(),
-      lastActiveDate: user.lastActiveDate.toISOString(),
-    };
-  }
-
-  private deserializeUser(data: any): User {
-    return {
-      ...data,
-      createdAt: new Date(data.createdAt),
-      updatedAt: new Date(data.updatedAt),
-      lastActiveDate: new Date(data.lastActiveDate),
-    };
-  }
-
-  private getAchievementName(id: string): string {
-    const names: Record<string, string> = {
-      'first_stroke': 'First Stroke',
-      'first_artwork': 'First Masterpiece',
-      'week_streak': 'Week Warrior',
-      'month_streak': 'Dedicated Artist',
-      'first_lesson': 'Student of Art',
-      'skill_tree_complete': 'Skill Master',
-    };
-    return names[id] || 'Achievement';
-  }
-
-  private getAchievementDescription(id: string): string {
-    const descriptions: Record<string, string> = {
-      'first_stroke': 'Made your first mark on the canvas',
-      'first_artwork': 'Created your first artwork',
-      'week_streak': 'Practiced for 7 days in a row',
-      'month_streak': 'Practiced for 30 days in a row',
-      'first_lesson': 'Completed your first lesson',
-      'skill_tree_complete': 'Completed an entire skill tree',
-    };
-    return descriptions[id] || 'Achievement unlocked!';
-  }
-
-  // Public utility methods
-
-  public getXPToNextLevel(): number {
-    if (!this.currentUser) return 100;
-    
-    const currentLevelXP = this.calculateTotalXPForLevel(this.currentUser.level - 1);
-    const nextLevelXP = this.calculateTotalXPForLevel(this.currentUser.level);
-    const currentProgressXP = this.currentUser.totalXP - currentLevelXP;
-    
-    return nextLevelXP - currentLevelXP - currentProgressXP;
-  }
-
-  private calculateTotalXPForLevel(level: number): number {
-    // Sum of XP required for all levels up to this level
-    let total = 0;
-    for (let i = 1; i <= level; i++) {
-      total += i * 100;
-    }
-    return total;
   }
 }
 
-// Export singleton instance
 export const profileSystem = ProfileSystem.getInstance();
+export default profileSystem;

@@ -7,6 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "scheme": "pikaso",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -17,7 +18,8 @@
       "requireFullScreen": false,
       "infoPlist": {
         "CADisableMinimumFrameDurationOnPhone": true
-      }
+      },
+      "bundleIdentifier": "com.anonymous.Pikaso"
     },
     "android": {
       "adaptiveIcon": {
