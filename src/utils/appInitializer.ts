@@ -4,6 +4,7 @@ import { dataManager } from '../engines/core/DataManager';
 import { errorHandler } from '../engines/core/ErrorHandler';
 import { performanceMonitor } from '../engines/core/PerformanceMonitor';
 import { EventBus } from '../engines/core/EventBus';
+import { InitializationResult } from '../types';
 
 // Import all engine modules with proper destructuring
 import { initializeLearningEngine, lessonEngine } from '../engines/learning';
@@ -22,15 +23,6 @@ import { socialEngine, challengeSystem } from '../engines/community';
  * - Modular system initialization
  * - Enterprise logging and monitoring
  */
-
-interface InitializationResult {
-  success: boolean;
-  initializedSystems: string[];
-  failedSystems: string[];
-  warnings: string[];
-  duration: number;
-  healthStatus: 'healthy' | 'degraded' | 'unhealthy';
-}
 
 interface InitializationConfig {
   retryAttempts: number;
@@ -122,20 +114,21 @@ class AppInitializer {
     const initializedSystems: string[] = [];
     const failedSystems: string[] = [];
     const warnings: string[] = [];
+    const errors: string[] = []; // FIXED: Added errors array
 
     console.log('🚀 Starting Pikaso App Initialization...');
     console.log(`📊 Config: ${JSON.stringify(config, null, 2)}`);
 
     try {
       // Phase 1: Core Systems (Critical)
-      await this.initializeCriticalSystems(initializedSystems, failedSystems, warnings, config);
+      await this.initializeCriticalSystems(initializedSystems, failedSystems, warnings, errors, config);
 
       // Phase 2: Engine Systems (Important)
-      await this.initializeEngineSystems(initializedSystems, failedSystems, warnings, config);
+      await this.initializeEngineSystems(initializedSystems, failedSystems, warnings, errors, config);
 
       // Phase 3: Optional Systems (Nice to have)
       if (!config.skipNonCriticalSystems) {
-        await this.initializeOptionalSystems(initializedSystems, failedSystems, warnings, config);
+        await this.initializeOptionalSystems(initializedSystems, failedSystems, warnings, errors, config);
       }
 
       // Phase 4: Health Checks
@@ -155,6 +148,7 @@ class AppInitializer {
         initializedSystems,
         failedSystems,
         warnings,
+        errors, // FIXED: Include errors in result
         duration,
         healthStatus,
       };
@@ -170,6 +164,7 @@ class AppInitializer {
         initializedSystems,
         failedSystems: [...failedSystems, 'critical_failure'],
         warnings: [...warnings, `Critical error: ${String(error)}`],
+        errors: [...errors, String(error)], // FIXED: Include error in errors array
         duration: Date.now() - startTime,
         healthStatus: 'unhealthy',
       };
@@ -182,6 +177,7 @@ class AppInitializer {
     initialized: string[],
     failed: string[],
     warnings: string[],
+    errors: string[], // FIXED: Added errors parameter
     config: InitializationConfig
   ): Promise<void> {
     console.log('📦 Phase 1: Initializing Critical Systems...');
@@ -190,13 +186,13 @@ class AppInitializer {
     await this.initializeSystem('ErrorHandler', async () => {
       errorHandler.initialize();
       this.registerCleanupCallback(() => errorHandler.cleanup());
-    }, initialized, failed, warnings, config);
+    }, initialized, failed, warnings, errors, config);
 
     // Data Manager
     await this.initializeSystem('DataManager', async () => {
       await dataManager.get('health_check');
       console.log('💾 DataManager ready');
-    }, initialized, failed, warnings, config);
+    }, initialized, failed, warnings, errors, config);
 
     // Performance Monitor
     if (config.enablePerformanceMonitoring) {
@@ -204,20 +200,21 @@ class AppInitializer {
         performanceMonitor.startMonitoring();
         this.registerCleanupCallback(() => performanceMonitor.stopMonitoring());
         console.log('📊 PerformanceMonitor active');
-      }, initialized, failed, warnings, config);
+      }, initialized, failed, warnings, errors, config);
     }
 
     // Event Bus
     await this.initializeSystem('EventBus', async () => {
       this.eventBus.emit('app:core_systems_ready');
       console.log('📡 EventBus operational');
-    }, initialized, failed, warnings, config);
+    }, initialized, failed, warnings, errors, config);
   }
 
   private async initializeEngineSystems(
     initialized: string[],
     failed: string[],
     warnings: string[],
+    errors: string[], // FIXED: Added errors parameter
     config: InitializationConfig
   ): Promise<void> {
     console.log('🎯 Phase 2: Initializing Engine Systems...');
@@ -232,7 +229,7 @@ class AppInitializer {
       } else {
         console.log(`📚 Learning Engine loaded with ${lessons.length} lessons`);
       }
-    }, initialized, failed, warnings, config);
+    }, initialized, failed, warnings, errors, config);
 
     // User Engine
     await this.initializeSystem('UserEngine', async () => {
@@ -240,7 +237,7 @@ class AppInitializer {
         throw new Error('User engine systems not properly initialized');
       }
       console.log('👤 User Engine systems ready');
-    }, initialized, failed, warnings, config);
+    }, initialized, failed, warnings, errors, config);
 
     // Drawing Engine
     await this.initializeSystem('DrawingEngine', async () => {
@@ -248,7 +245,7 @@ class AppInitializer {
         throw new Error('Drawing engine not available');
       }
       console.log('🎨 Drawing Engine ready with ValkyrieEngine');
-    }, initialized, failed, warnings, config);
+    }, initialized, failed, warnings, errors, config);
 
     // Community Engine
     await this.initializeSystem('CommunityEngine', async () => {
@@ -258,13 +255,14 @@ class AppInitializer {
         throw new Error('Community engine systems not properly initialized');
       }
       console.log('🌍 Community Engine systems ready');
-    }, initialized, failed, warnings, config);
+    }, initialized, failed, warnings, errors, config);
   }
 
   private async initializeOptionalSystems(
     initialized: string[],
     failed: string[],
     warnings: string[],
+    errors: string[], // FIXED: Added errors parameter
     config: InitializationConfig
   ): Promise<void> {
     console.log('🌟 Phase 3: Initializing Optional Systems...');
@@ -272,17 +270,17 @@ class AppInitializer {
     // Analytics
     await this.initializeSystem('Analytics', async () => {
       console.log('📊 Analytics system ready');
-    }, initialized, failed, warnings, config, false);
+    }, initialized, failed, warnings, errors, config, false);
 
     // Push Notifications
     await this.initializeSystem('PushNotifications', async () => {
       console.log('🔔 Push notifications ready');
-    }, initialized, failed, warnings, config, false);
+    }, initialized, failed, warnings, errors, config, false);
 
     // Background Services
     await this.initializeSystem('BackgroundServices', async () => {
       console.log('⚙️ Background services ready');
-    }, initialized, failed, warnings, config, false);
+    }, initialized, failed, warnings, errors, config, false);
   }
 
   private async performHealthChecks(
@@ -356,6 +354,7 @@ class AppInitializer {
     initialized: string[],
     failed: string[],
     warnings: string[],
+    errors: string[], // FIXED: Added errors parameter
     config: InitializationConfig,
     isCritical: boolean = true
   ): Promise<void> {
@@ -392,8 +391,11 @@ class AppInitializer {
     }
 
     // All attempts failed
+    const errorMessage = `${systemName} failed to initialize: ${String(lastError)}`;
+    
     if (isCritical) {
       failed.push(systemName);
+      errors.push(errorMessage);
       errorHandler.handleError(errorHandler.createError(
         'INITIALIZATION_ERROR',
         `Critical system ${systemName} failed to initialize`,
@@ -418,7 +420,7 @@ class AppInitializer {
     try {
       // Check core systems
       systems.dataManager = true;
-      systems.errorHandler = errorHandler.isInitialized();
+      systems.errorHandler = errorHandler.isInitialized(); // FIXED: Call method correctly
       systems.eventBus = !!this.eventBus;
 
       // Check learning engine
@@ -551,7 +553,7 @@ class AppInitializer {
   }
 
   private logInitializationResult(result: InitializationResult): void {
-    const { success, initializedSystems, failedSystems, warnings, duration, healthStatus } = result;
+    const { success, initializedSystems, failedSystems, warnings, errors, duration, healthStatus } = result;
 
     console.log('\n' + '='.repeat(60));
     console.log('🎉 PIKASO INITIALIZATION COMPLETE');
@@ -573,6 +575,11 @@ class AppInitializer {
     if (warnings.length > 0) {
       console.log(`Warnings: ${warnings.length}`);
       warnings.forEach(warning => console.log(`  ⚠️ ${warning}`));
+    }
+
+    if (errors.length > 0) {
+      console.log(`Errors: ${errors.length}`);
+      errors.forEach(error => console.log(`  🚨 ${error}`));
     }
     
     console.log('='.repeat(60) + '\n');

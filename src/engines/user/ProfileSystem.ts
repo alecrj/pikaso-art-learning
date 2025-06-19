@@ -3,6 +3,7 @@
 import { EventBus } from '../core/EventBus';
 import { dataManager } from '../core/DataManager';
 import { errorHandler } from '../core/ErrorHandler';
+import { UserProfile } from '../../types';
 
 /**
  * PROFESSIONAL PROFILE MANAGEMENT SYSTEM
@@ -14,47 +15,9 @@ import { errorHandler } from '../core/ErrorHandler';
  * - Social connections
  * - Achievement showcase
  * - Portfolio integration
+ * - XP and progression tracking
+ * - Comprehensive user statistics
  */
-
-export interface UserProfile {
-  id: string;
-  username: string;
-  displayName: string;
-  email?: string;
-  avatar?: string;
-  bio?: string;
-  skillLevel: 'beginner' | 'intermediate' | 'advanced' | 'professional';
-  joinedAt: number;
-  lastActiveAt: number;
-  
-  // Social
-  followers: number;
-  following: number;
-  isFollowing?: boolean;
-  
-  // Privacy
-  isPrivate: boolean;
-  showProgress: boolean;
-  showArtwork: boolean;
-  
-  // Stats
-  totalArtworks: number;
-  totalLessons: number;
-  currentStreak: number;
-  longestStreak: number;
-  
-  // Achievements
-  featuredAchievements: string[];
-  totalAchievements: number;
-  
-  // Settings
-  preferences: {
-    language: string;
-    timezone: string;
-    emailNotifications: boolean;
-    pushNotifications: boolean;
-  };
-}
 
 export interface ProfileUpdate {
   displayName?: string;
@@ -65,6 +28,15 @@ export interface ProfileUpdate {
   showProgress?: boolean;
   showArtwork?: boolean;
   preferences?: Partial<UserProfile['preferences']>;
+}
+
+export interface UserStatUpdate {
+  totalArtworks?: number;
+  totalLessons?: number;
+  currentStreak?: number;
+  longestStreak?: number;
+  totalAchievements?: number;
+  totalDrawingTime?: number;
 }
 
 class ProfileSystem {
@@ -90,11 +62,13 @@ class ProfileSystem {
     try {
       const profile = await dataManager.getUserProfile();
       if (profile) {
-        this.currentProfile = profile;
-        this.profileCache.set(profile.id, profile);
-        this.eventBus.emit('profile:loaded', profile);
+        // Ensure profile has all required properties
+        const completeProfile = this.ensureCompleteProfile(profile);
+        this.currentProfile = completeProfile;
+        this.profileCache.set(completeProfile.id, completeProfile);
+        this.eventBus.emit('profile:loaded', completeProfile);
       }
-      return profile;
+      return this.currentProfile;
     } catch (error) {
       errorHandler.handleError(errorHandler.createError(
         'USER_ERROR',
@@ -104,6 +78,11 @@ class ProfileSystem {
       ));
       return null;
     }
+  }
+
+  // FIXED: Add missing getCurrentUser method
+  public getCurrentUser(): UserProfile | null {
+    return this.currentProfile;
   }
   
   public async createProfile(data: {
@@ -122,26 +101,42 @@ class ProfileSystem {
         joinedAt: Date.now(),
         lastActiveAt: Date.now(),
         
+        // Social
         followers: 0,
         following: 0,
         
+        // Privacy
         isPrivate: false,
         showProgress: true,
         showArtwork: true,
         
-        totalArtworks: 0,
-        totalLessons: 0,
-        currentStreak: 0,
-        longestStreak: 0,
+        // Learning Goals
+        learningGoals: [],
         
+        // Statistics - Complete stats object
+        stats: {
+          totalDrawingTime: 0,
+          totalLessonsCompleted: 0,
+          totalArtworksCreated: 0,
+          currentStreak: 0,
+          longestStreak: 0,
+          totalArtworks: 0,
+          totalLessons: 0,
+          totalAchievements: 0,
+        },
+        
+        // Achievements
         featuredAchievements: [],
-        totalAchievements: 0,
         
+        // Preferences - Complete preferences object
         preferences: {
+          theme: 'auto' as const,
           language: 'en',
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           emailNotifications: true,
           pushNotifications: true,
+          notifications: true,
+          privacy: 'public' as const,
         },
       };
       
@@ -211,9 +206,11 @@ class ProfileSystem {
       // In production, this would fetch from API
       const profile = await dataManager.get<UserProfile>(`profile_${userId}`);
       if (profile) {
-        this.profileCache.set(userId, profile);
+        const completeProfile = this.ensureCompleteProfile(profile);
+        this.profileCache.set(userId, completeProfile);
+        return completeProfile;
       }
-      return profile;
+      return null;
       
     } catch (error) {
       errorHandler.handleError(errorHandler.createError(
@@ -223,6 +220,35 @@ class ProfileSystem {
         { error, userId }
       ));
       return null;
+    }
+  }
+
+  // =================== XP AND PROGRESSION ===================
+
+  // FIXED: Add missing addXP method
+  public async addXP(amount: number, source?: string): Promise<void> {
+    if (!this.currentProfile) {
+      throw new Error('No profile loaded');
+    }
+
+    try {
+      // This would typically be handled by ProgressionSystem,
+      // but we provide a simple implementation here for API compatibility
+      this.eventBus.emit('user:xp_request', {
+        userId: this.currentProfile.id,
+        amount,
+        source: source || 'profile_system',
+      });
+      
+      console.log(`XP awarded: ${amount} (${source || 'profile_system'})`);
+      
+    } catch (error) {
+      errorHandler.handleError(errorHandler.createError(
+        'USER_ERROR',
+        'Failed to add XP',
+        'medium',
+        { error, amount, source }
+      ));
     }
   }
   
@@ -330,13 +356,7 @@ class ProfileSystem {
   
   // =================== STATS MANAGEMENT ===================
   
-  public async updateStats(stats: Partial<{
-    totalArtworks: number;
-    totalLessons: number;
-    currentStreak: number;
-    longestStreak: number;
-    totalAchievements: number;
-  }>): Promise<void> {
+  public async updateStats(statsUpdate: UserStatUpdate): Promise<void> {
     if (!this.currentProfile) {
       throw new Error('No profile loaded');
     }
@@ -344,11 +364,23 @@ class ProfileSystem {
     try {
       const updatedProfile = {
         ...this.currentProfile,
-        ...stats,
-        longestStreak: Math.max(
-          this.currentProfile.longestStreak,
-          stats.currentStreak || this.currentProfile.currentStreak
-        ),
+        stats: {
+          ...this.currentProfile.stats,
+          // Update both old and new stat properties for compatibility
+          totalArtworks: statsUpdate.totalArtworks ?? this.currentProfile.stats.totalArtworks,
+          totalLessons: statsUpdate.totalLessons ?? this.currentProfile.stats.totalLessons,
+          currentStreak: statsUpdate.currentStreak ?? this.currentProfile.stats.currentStreak,
+          longestStreak: Math.max(
+            this.currentProfile.stats.longestStreak,
+            statsUpdate.longestStreak ?? this.currentProfile.stats.longestStreak,
+            statsUpdate.currentStreak ?? this.currentProfile.stats.currentStreak
+          ),
+          totalAchievements: statsUpdate.totalAchievements ?? this.currentProfile.stats.totalAchievements,
+          totalDrawingTime: statsUpdate.totalDrawingTime ?? this.currentProfile.stats.totalDrawingTime,
+          // Keep compatibility with old property names
+          totalArtworksCreated: statsUpdate.totalArtworks ?? this.currentProfile.stats.totalArtworksCreated,
+          totalLessonsCompleted: statsUpdate.totalLessons ?? this.currentProfile.stats.totalLessonsCompleted,
+        },
       };
       
       await dataManager.saveUserProfile(updatedProfile);
@@ -356,7 +388,7 @@ class ProfileSystem {
       
       this.eventBus.emit('profile:stats_updated', {
         userId: this.currentProfile.id,
-        stats,
+        stats: statsUpdate,
       });
       
     } catch (error) {
@@ -364,16 +396,39 @@ class ProfileSystem {
         'USER_ERROR',
         'Failed to update profile stats',
         'low',
-        { error, stats }
+        { error, stats: statsUpdate }
+      ));
+    }
+  }
+
+  // =================== LEARNING GOALS ===================
+
+  public async updateLearningGoals(goals: string[]): Promise<void> {
+    if (!this.currentProfile) {
+      throw new Error('No profile loaded');
+    }
+
+    try {
+      await this.updateProfile({ 
+        learningGoals: goals 
+      });
+      
+      this.eventBus.emit('profile:learning_goals_updated', {
+        userId: this.currentProfile.id,
+        goals,
+      });
+      
+    } catch (error) {
+      errorHandler.handleError(errorHandler.createError(
+        'USER_ERROR',
+        'Failed to update learning goals',
+        'low',
+        { error, goals }
       ));
     }
   }
   
   // =================== UTILITIES ===================
-  
-  public getCurrentProfile(): UserProfile | null {
-    return this.currentProfile;
-  }
   
   public isLoggedIn(): boolean {
     return !!this.currentProfile;
@@ -417,7 +472,68 @@ class ProfileSystem {
       throw error;
     }
   }
+
+  // =================== PRIVATE HELPERS ===================
+
+  /**
+   * Ensures a profile object has all required properties with proper defaults
+   */
+  private ensureCompleteProfile(profile: Partial<UserProfile>): UserProfile {
+    return {
+      id: profile.id || '',
+      username: profile.username || '',
+      displayName: profile.displayName || '',
+      email: profile.email,
+      avatar: profile.avatar,
+      bio: profile.bio,
+      skillLevel: profile.skillLevel || 'beginner',
+      joinedAt: profile.joinedAt || Date.now(),
+      lastActiveAt: profile.lastActiveAt || Date.now(),
+      
+      // Social
+      followers: profile.followers || 0,
+      following: profile.following || 0,
+      isFollowing: profile.isFollowing,
+      
+      // Privacy
+      isPrivate: profile.isPrivate || false,
+      showProgress: profile.showProgress !== false, // default true
+      showArtwork: profile.showArtwork !== false,   // default true
+      
+      // Learning Goals
+      learningGoals: profile.learningGoals || [],
+      
+      // Statistics
+      stats: {
+        totalDrawingTime: 0,
+        totalLessonsCompleted: 0,
+        totalArtworksCreated: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        totalArtworks: 0,
+        totalLessons: 0,
+        totalAchievements: 0,
+        ...profile.stats,
+      },
+      
+      // Achievements
+      featuredAchievements: profile.featuredAchievements || [],
+      
+      // Preferences
+      preferences: {
+        theme: 'auto' as const,
+        language: 'en',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        emailNotifications: true,
+        pushNotifications: true,
+        notifications: true,
+        privacy: 'public' as const,
+        ...profile.preferences,
+      },
+    };
+  }
 }
 
 export const profileSystem = ProfileSystem.getInstance();
+export { ProfileSystem }; // Export both instance and class
 export default profileSystem;

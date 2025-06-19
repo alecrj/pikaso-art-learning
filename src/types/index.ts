@@ -1,4 +1,4 @@
-// src/types/index.ts - FIXED VALIDATION RULE AND MISSING PROPERTIES
+// src/types/index.ts - ENTERPRISE UNIFIED TYPE SYSTEM
 
 import { SkPath, SkImage } from '@shopify/react-native-skia';
 import { ReactNode } from 'react';
@@ -21,7 +21,52 @@ export interface Color {
   alpha: number;
 }
 
-// ========================== ERROR BOUNDARY TYPES ==========================
+// ========================== INITIALIZATION TYPES ==========================
+
+export interface InitializationResult {
+  success: boolean;
+  initializedSystems: string[];
+  failedSystems: string[];
+  warnings: string[];
+  errors: string[];  // FIXED: Added missing errors property
+  duration: number;
+  healthStatus: 'healthy' | 'degraded' | 'unhealthy';
+}
+
+// ========================== ERROR TYPES ==========================
+
+export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+// FIXED: Comprehensive error categories for enterprise scale
+export type ErrorCategory = 
+  | 'NETWORK_ERROR'
+  | 'VALIDATION_ERROR'
+  | 'PERMISSION_ERROR'
+  | 'STORAGE_ERROR'
+  | 'INITIALIZATION_ERROR'
+  | 'DRAWING_ERROR'
+  | 'LEARNING_ERROR'
+  | 'USER_ERROR'
+  | 'COMMUNITY_ERROR'
+  | 'UNKNOWN_ERROR'
+  // Additional categories for complete coverage
+  | 'STORAGE_SAVE_ERROR'
+  | 'USER_INIT_ERROR'
+  | 'CHALLENGE_FETCH_ERROR'
+  | 'CHALLENGE_CREATE_ERROR'
+  | 'USER_STATS_ERROR'
+  | 'SUBMISSION_ERROR'
+  | 'VOTING_ERROR'
+  | 'STATS_ERROR'
+  | 'SAVE_ERROR'
+  | 'LOAD_ERROR'
+  | 'PROGRESS_LOAD_ERROR'
+  | 'LESSON_COMPLETE_ERROR'
+  | 'PROGRESS_SAVE_ERROR'
+  | 'ARTWORK_LIKE_ERROR'
+  | 'ARTWORK_VIEW_ERROR'
+  | 'PORTFOLIO_LOAD_ERROR'
+  | 'PORTFOLIO_SAVE_ERROR';
 
 export interface ErrorBoundaryProps {
   children: ReactNode;
@@ -36,33 +81,105 @@ export interface ErrorBoundaryState {
   errorId?: string;
 }
 
+// ========================== APP SETTINGS TYPES ==========================
+
+// UNIFIED APP SETTINGS - Enterprise Grade
+export interface AppSettings {
+  [key: string]: any;
+  
+  // Metadata
+  version: number;
+  lastUpdated: number;
+  
+  // Appearance
+  theme: 'auto' | 'light' | 'dark';
+  
+  // UNIFIED NOTIFICATIONS STRUCTURE
+  notifications: {
+    enabled: boolean;
+    dailyReminder: boolean;
+    achievementAlerts: boolean;
+    challengeAlerts: boolean;
+    reminderTime: string;
+    // Extended enterprise notifications
+    lessons: boolean;
+    achievements: boolean;
+    social: boolean;
+    challenges: boolean;
+    lessonCompletions: boolean;
+    achievementUnlocks: boolean;
+    socialActivity: boolean;
+  };
+  
+  // Drawing Settings
+  drawing: {
+    pressureSensitivity: number;
+    smoothing: number;
+    autosave: boolean;
+    hapticFeedback: boolean;
+    maxUndoHistory?: number;
+    canvasResolution?: 'standard' | 'high' | 'ultra';
+    antiAliasing?: boolean;
+  };
+  
+  // Learning Settings
+  learning: {
+    dailyGoal: number;
+    reminderTime: string;
+    difficulty: 'easy' | 'adaptive' | 'hard';
+    skipIntroVideos?: boolean;
+    autoAdvance?: boolean;
+    practiceMode?: 'guided' | 'free' | 'mixed';
+  };
+  
+  // UNIFIED PRIVACY SETTINGS
+  privacy: {
+    profileVisibility: 'public' | 'friends' | 'private';
+    shareArtwork: boolean;
+    shareProgress: boolean;
+    allowComments: boolean;
+    analyticsOptIn: boolean;
+    showProgress?: boolean;
+    allowMessages?: boolean;
+    portfolioVisibility?: 'public' | 'friends' | 'private';
+  };
+  
+  // UNIFIED ACCESSIBILITY SETTINGS
+  accessibility: {
+    fontSize: 'small' | 'medium' | 'large' | 'extra-large';
+    highContrast: boolean;
+    reducedMotion: boolean;
+    screenReader: boolean;
+    colorBlindSupport: 'none' | 'deuteranopia' | 'protanopia' | 'tritanopia';
+  };
+  
+  // Performance Settings
+  performance?: {
+    enableGPUAcceleration: boolean;
+    frameRateLimit: 30 | 60 | 120;
+    memoryOptimization: 'low' | 'balanced' | 'high';
+    backgroundProcessing: boolean;
+  };
+  
+  // Experimental Features
+  experimental?: {
+    betaFeatures: boolean;
+    aiAssistance: boolean;
+    cloudSync: boolean;
+    collaborativeDrawing: boolean;
+  };
+}
+
 // ========================== DRAWING TYPES ==========================
 
 export type DrawingTool = 'brush' | 'eraser' | 'move' | 'select' | 'zoom';
-
 export type DrawingMode = 'normal' | 'reference' | 'guided' | 'timelapse';
-
 export type BlendMode = 
-  | 'normal' 
-  | 'multiply' 
-  | 'screen' 
-  | 'overlay' 
-  | 'soft-light' 
-  | 'hard-light' 
-  | 'color-dodge' 
-  | 'color-burn' 
-  | 'darken' 
-  | 'lighten';
+  | 'normal' | 'multiply' | 'screen' | 'overlay' | 'soft-light' | 'hard-light' 
+  | 'color-dodge' | 'color-burn' | 'darken' | 'lighten';
 
 export type BrushCategory = 
-  | 'pencil' 
-  | 'ink' 
-  | 'paint' 
-  | 'watercolor' 
-  | 'airbrush' 
-  | 'marker' 
-  | 'texture' 
-  | 'eraser';
+  | 'pencil' | 'ink' | 'paint' | 'watercolor' | 'airbrush' | 'marker' | 'texture' | 'eraser';
 
 export interface BrushSettings {
   size: number;
@@ -100,7 +217,6 @@ export interface Brush {
   customizable: boolean;
   textureId?: string;
   isEraser?: boolean;
-  // Extra for lesson compatibility
   size?: number;
   opacity?: number;
   hardness?: number;
@@ -198,22 +314,42 @@ export interface DrawingState {
   savedPalettes: Color[][];
 }
 
-// =================== LESSON CONTENT TYPES ===================
+// ========================== LEARNING TYPES ==========================
+
+export type SkillLevel = 'beginner' | 'intermediate' | 'advanced' | 'professional';
+export type LessonType = 'theory' | 'practice' | 'challenge' | 'guided' | 'assessment' | 'video';
+export type LessonStatus = 'locked' | 'available' | 'in_progress' | 'completed' | 'mastered' | 'in-progress';
+
+export interface ValidationRule {
+  type: string;
+  params?: Record<string, any>;
+  threshold?: number;
+  criteria?: any;
+  target?: any;
+  tolerance?: number;
+  targets?: string[];
+}
+
+export interface LearningObjective {
+  id: string;
+  description: string;
+  completed: boolean;
+  required: boolean;
+  type?: 'primary' | 'secondary' | 'bonus';
+}
+
+export interface LessonObjective {
+  id: string;
+  description: string;
+  completed: boolean;
+  required: boolean;
+}
 
 export interface LessonContent {
   id: string;
-  type:
-    | 'multiple_choice'
-    | 'true_false'
-    | 'color_match'
-    | 'visual_selection'
-    | 'drawing_exercise'
-    | 'guided_step'
-    | 'shape_practice'
-    | 'video_lesson'
-    | 'assessment'
-    | 'portfolio_project';
-
+  type: 'multiple_choice' | 'true_false' | 'color_match' | 'visual_selection' 
+      | 'drawing_exercise' | 'guided_step' | 'shape_practice' | 'video_lesson' 
+      | 'assessment' | 'portfolio_project';
   question?: string;
   instruction?: string;
   explanation?: string;
@@ -232,76 +368,6 @@ export interface LessonContent {
   image?: string;
   video?: string;
   demonstration?: string;
-}
-
-export interface LessonProgress {
-  lessonId: string;
-  contentProgress: number; // 0-100
-  currentContentIndex: number;
-  totalContent: number;
-  score: number;
-  timeSpent: number; // milliseconds
-  completed: boolean;
-  startedAt: string;
-  completedAt?: string;
-}
-
-export interface ValidationResult {
-  isCorrect: boolean;
-  feedback: string;
-  explanation?: string;
-  xpAwarded: number;
-  showHint?: boolean;
-  hint?: string;
-}
-
-// ========================== FIXED VALIDATION RULE ==========================
-
-export interface ValidationRule {
-  type: string;
-  params?: Record<string, any>;
-  threshold?: number;
-  criteria?: any;
-  // FIXED: Add missing properties from LessonEngine
-  target?: any; // For line_count, shape_accuracy
-  tolerance?: number; // For shape_accuracy
-  targets?: string[]; // For shape_recognition
-}
-
-// ========================== LEARNING TYPES ==========================
-
-export type SkillLevel = 'beginner' | 'intermediate' | 'advanced';
-
-export type LessonType =
-  | 'theory'
-  | 'practice'
-  | 'challenge'
-  | 'guided'
-  | 'assessment'
-  | 'video';
-
-export type LessonStatus =
-  | 'locked'
-  | 'available'
-  | 'in_progress'
-  | 'completed'
-  | 'mastered'
-  | 'in-progress';
-
-// FIXED: Add completed property to LearningObjective
-export interface LearningObjective {
-  id: string;
-  description: string;
-  completed: boolean; // FIXED: This was missing!
-  required: boolean;
-  type?: 'primary' | 'secondary' | 'bonus';
-}
-
-export interface LessonObjective {
-  id: string;
-  description: string;
-  completed: boolean;
-  required: boolean;
 }
 
 export interface TheorySegment {
@@ -333,6 +399,15 @@ export interface PracticeInstruction {
     width: number;
     height: number;
   };
+}
+
+export interface AssessmentCriteria {
+  id: string;
+  name: string;
+  description: string;
+  weight: number;
+  passingScore: number;
+  evaluationType?: 'automatic' | 'manual';
 }
 
 export interface Assessment {
@@ -370,15 +445,6 @@ export interface PracticeContent {
   expectedDuration: number;
 }
 
-export interface AssessmentCriteria {
-  id: string;
-  name: string;
-  description: string;
-  weight: number;
-  passingScore: number;
-  evaluationType?: 'automatic' | 'manual';
-}
-
 export interface Lesson {
   id: string;
   title: string;
@@ -389,7 +455,7 @@ export interface Lesson {
   estimatedTime: number;
   difficulty: number;
   prerequisites: string[];
-  content: LessonContent[]; // <-- new property
+  content: LessonContent[];
   objectives: LearningObjective[];
   theoryContent?: TheoryContent;
   practiceContent?: PracticeContent;
@@ -412,7 +478,26 @@ export interface Lesson {
   unlockRequirements?: string[];
 }
 
-// ========================== SKILL TREE & USER TYPES ==========================
+export interface LessonProgress {
+  lessonId: string;
+  contentProgress: number;
+  currentContentIndex: number;
+  totalContent: number;
+  score: number;
+  timeSpent: number;
+  completed: boolean;
+  startedAt: string;
+  completedAt?: string;
+}
+
+export interface ValidationResult {
+  isCorrect: boolean;
+  feedback: string;
+  explanation?: string;
+  xpAwarded: number;
+  showHint?: boolean;
+  hint?: string;
+}
 
 export interface SkillTree {
   id: string;
@@ -524,8 +609,64 @@ export interface LearningState {
   };
 }
 
-// ========================== USER TYPES ==========================
+// ========================== UNIFIED USER TYPES ==========================
 
+// ENTERPRISE USER PROFILE - Single Source of Truth
+export interface UserProfile {
+  // Core Identity
+  id: string;
+  username: string;
+  displayName: string;
+  email?: string;
+  avatar?: string;
+  bio?: string;
+  
+  // User Level & Experience
+  skillLevel: SkillLevel;
+  joinedAt: number;
+  lastActiveAt: number;
+  
+  // Social
+  followers: number;
+  following: number;
+  isFollowing?: boolean;
+  
+  // Privacy
+  isPrivate: boolean;
+  showProgress: boolean;
+  showArtwork: boolean;
+  
+  // Learning Goals & Progress
+  learningGoals: string[];
+  
+  // Statistics
+  stats: {
+    totalDrawingTime: number;
+    totalLessonsCompleted: number;
+    totalArtworksCreated: number;
+    currentStreak: number;
+    longestStreak: number;
+    totalArtworks: number;
+    totalLessons: number;
+    totalAchievements: number;
+  };
+  
+  // Achievements
+  featuredAchievements: string[];
+  
+  // Preferences
+  preferences: {
+    theme: 'light' | 'dark' | 'auto';
+    language: string;
+    timezone: string;
+    emailNotifications: boolean;
+    pushNotifications: boolean;
+    notifications: boolean;
+    privacy: 'public' | 'friends' | 'private';
+  };
+}
+
+// Legacy User interface for backwards compatibility
 export interface User {
   id: string;
   username: string;
@@ -548,29 +689,6 @@ export interface User {
   preferences: UserPreferences;
   stats: UserStats;
   achievements: Achievement[];
-}
-
-export interface UserProfile {
-  id: string;
-  displayName: string;
-  email: string;
-  avatar?: string;
-  joinedAt: number;
-  lastActiveAt: number;
-  skillLevel: SkillLevel;
-  learningGoals: string[];
-  preferences: {
-    theme: 'light' | 'dark' | 'auto';
-    notifications: boolean;
-    privacy: 'public' | 'friends' | 'private';
-  };
-  stats: {
-    totalDrawingTime: number;
-    totalLessonsCompleted: number;
-    totalArtworksCreated: number;
-    currentStreak: number;
-    longestStreak: number;
-  };
 }
 
 export interface UserProgress {
@@ -669,7 +787,7 @@ export interface UserStats {
   lessonsCompleted: number;
 }
 
-// ========================== PORTFOLIO ==========================
+// ========================== PORTFOLIO TYPES ==========================
 
 export interface Portfolio {
   id: string;
@@ -704,13 +822,13 @@ export interface Artwork {
   imageUrl: string;
   createdAt: number;
   updatedAt: number;
-  stats?: {  // FIXED: Made optional with ?
+  stats?: {
     views: number;
     likes: number;
     comments: number;
     shares: number;
   };
-  metadata?: {  // FIXED: Made optional with ?
+  metadata?: {
     drawingTime: number;
     strokeCount: number;
     layersUsed: number;
@@ -751,7 +869,7 @@ export interface Challenge {
   title: string;
   description: string;
   type: 'daily' | 'weekly' | 'monthly' | 'special';
-  theme?: string;  // FIXED: Made optional with ?
+  theme?: string;
   prompt?: string;
   rules?: string[];
   startDate: number;
@@ -763,7 +881,7 @@ export interface Challenge {
     badges?: string[];
   };
   participants: number;
-  submissions?: ChallengeSubmission[];  // FIXED: Made optional with ?
+  submissions?: ChallengeSubmission[];
   featured?: boolean;
   tags?: string[];
   prizes?: Prize[];
@@ -841,6 +959,7 @@ export interface PerformanceMetrics {
   drawCalls: number;
   inputLatency: number;
   renderTime: number;
+  timestamp: number;  // FIXED: Added missing timestamp property
 }
 
 export interface AppError {
@@ -1059,8 +1178,6 @@ export interface Dimensions {
 
 export type AchievementType = 'skill' | 'social' | 'milestone' | 'streak' | 'creativity';
 
-// ========================== LESSON COMPLETION DATA ==========================
-
 export interface LessonCompletionData {
   lessonId: string;
   score: number;
@@ -1069,8 +1186,6 @@ export interface LessonCompletionData {
   attempts: Record<string, number>;
   completedAt: string;
 }
-
-// ========================== LESSON STATE SUBSCRIPTION ==========================
 
 export interface LessonStateCallback {
   (state: {

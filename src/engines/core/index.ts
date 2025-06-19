@@ -1,26 +1,76 @@
-// src/engines/core/index.ts
-export { ErrorHandler } from './ErrorHandler';
-export { ErrorBoundary, withErrorBoundary } from './ErrorBoundary';
-export { PerformanceMonitor } from './PerformanceMonitor';
-export { dataManager } from './DataManager';
+// src/engines/core/index.ts - ENTERPRISE CORE ENGINE EXPORTS
+
+// FIXED: Export both classes and instances for maximum flexibility
+export { ErrorHandler, errorHandler } from './ErrorHandler';
 export { EventBus } from './EventBus';
+export { dataManager } from './DataManager';
+export { performanceMonitor } from './PerformanceMonitor';
 
-import { ErrorHandler } from './ErrorHandler';
-import { PerformanceMonitor } from './PerformanceMonitor';
-import { dataManager } from './DataManager';
-import { EventBus } from './EventBus';
+// Type exports
+export type { 
+  StructuredError, 
+  ErrorReport, 
+  ErrorHandlerConfig,
+  ErrorSeverity,
+  ErrorCategory 
+} from './ErrorHandler';
 
-export const errorHandler = ErrorHandler.getInstance();
-export const performanceMonitor = PerformanceMonitor.getInstance();
-export const eventBus = EventBus.getInstance();
+export type { PerformanceMetrics } from './PerformanceMonitor';
 
-export async function initializeCoreEngine(): Promise<void> {
-  try {
-    performanceMonitor.startMonitoring();
-    errorHandler.initialize();
-    console.log('Core engine initialized successfully');
-  } catch (error) {
-    console.error('Failed to initialize core engine:', error);
-    throw error;
+// FIXED: Create a unified core API for enterprise use
+class CoreEngine {
+  private static instance: CoreEngine;
+
+  private constructor() {}
+
+  public static getInstance(): CoreEngine {
+    if (!CoreEngine.instance) {
+      CoreEngine.instance = new CoreEngine();
+    }
+    return CoreEngine.instance;
   }
+
+  public async initialize(): Promise<boolean> {
+    try {
+      // Initialize error handler first
+      errorHandler.initialize({
+        enableLogging: true,
+        enableReporting: true,
+        enableUserNotification: true,
+        maxErrorsPerSession: 100,
+        environment: __DEV__ ? 'development' : 'production',
+      });
+
+      // Start performance monitoring
+      performanceMonitor.startMonitoring();
+
+      console.log('🚀 Core Engine initialized successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Core Engine initialization failed:', error);
+      return false;
+    }
+  }
+
+  public async cleanup(): Promise<void> {
+    try {
+      errorHandler.cleanup();
+      performanceMonitor.stopMonitoring();
+      console.log('🧹 Core Engine cleaned up');
+    } catch (error) {
+      console.error('❌ Core Engine cleanup failed:', error);
+    }
+  }
+
+  public isReady(): boolean {
+    return errorHandler.isInitialized() && performanceMonitor.isMonitoring();
+  }
+}
+
+export const coreEngine = CoreEngine.getInstance();
+export { CoreEngine };
+
+// Convenience function for initializing all core systems
+export async function initializeCoreEngine(): Promise<boolean> {
+  return coreEngine.initialize();
 }

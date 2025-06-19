@@ -2,6 +2,7 @@
 
 import { Platform } from 'react-native';
 import { EventBus } from './EventBus';
+import { ErrorSeverity, ErrorCategory } from '../../types';
 
 /**
  * ENTERPRISE ERROR HANDLING SYSTEM
@@ -14,28 +15,16 @@ import { EventBus } from './EventBus';
  * - User-friendly error messages
  * - Error reporting to backend
  * - Crash analytics integration
+ * - React Native compatibility
  */
 
-// Global type augmentation for React Native ErrorUtils
+// FIXED: Properly handle React Native's global ErrorUtils
 declare global {
   var ErrorUtils: {
     setGlobalHandler: (handler: (error: Error, isFatal?: boolean) => void) => void;
     getGlobalHandler: () => (error: Error, isFatal?: boolean) => void;
-  };
+  } | undefined;
 }
-
-export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
-export type ErrorCategory = 
-  | 'NETWORK_ERROR'
-  | 'VALIDATION_ERROR'
-  | 'PERMISSION_ERROR'
-  | 'STORAGE_ERROR'
-  | 'INITIALIZATION_ERROR'
-  | 'DRAWING_ERROR'
-  | 'LEARNING_ERROR'
-  | 'USER_ERROR'
-  | 'COMMUNITY_ERROR'
-  | 'UNKNOWN_ERROR';
 
 export interface StructuredError extends Error {
   code: string;
@@ -93,7 +82,7 @@ class ErrorHandler {
   private errorCount: number = 0;
   private sessionId: string;
   private errorQueue: StructuredError[] = [];
-  private isInitialized: boolean = false;
+  private initialized: boolean = false;  // FIXED: Renamed to avoid conflicts
   private originalGlobalHandler?: (error: Error, isFatal?: boolean) => void;
 
   private constructor() {
@@ -112,7 +101,7 @@ class ErrorHandler {
   // =================== INITIALIZATION ===================
 
   public initialize(config?: Partial<ErrorHandlerConfig>): void {
-    if (this.isInitialized) {
+    if (this.initialized) {
       console.warn('ErrorHandler already initialized');
       return;
     }
@@ -120,55 +109,59 @@ class ErrorHandler {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.setupGlobalErrorHandler();
     this.setupPromiseRejectionHandler();
-    this.isInitialized = true;
+    this.initialized = true;
 
     console.log('🛡️ ErrorHandler initialized with config:', this.config);
   }
 
   private setupGlobalErrorHandler(): void {
-    // Store the original handler for cleanup
+    // FIXED: Properly check for React Native's ErrorUtils
     if (typeof global !== 'undefined' && global.ErrorUtils) {
-      this.originalGlobalHandler = global.ErrorUtils.getGlobalHandler();
-      
-      global.ErrorUtils.setGlobalHandler((error: Error, isFatal?: boolean) => {
-        this.handleError(this.createError(
-          'UNKNOWN_ERROR',
-          error.message,
-          isFatal ? 'critical' : 'high',
-          {
-            stack: error.stack,
-            isFatal,
-            name: error.name,
-          }
-        ));
+      try {
+        this.originalGlobalHandler = global.ErrorUtils.getGlobalHandler();
+        
+        global.ErrorUtils.setGlobalHandler((error: Error, isFatal?: boolean) => {
+          this.handleError(this.createError(
+            'UNKNOWN_ERROR',
+            error.message,
+            isFatal ? 'critical' : 'high',
+            {
+              stack: error.stack,
+              isFatal,
+              name: error.name,
+            }
+          ));
 
-        // Call original handler if it exists
-        if (this.originalGlobalHandler) {
-          this.originalGlobalHandler(error, isFatal);
-        }
-      });
+          // Call original handler if it exists
+          if (this.originalGlobalHandler) {
+            this.originalGlobalHandler(error, isFatal);
+          }
+        });
+      } catch (setupError) {
+        console.warn('Failed to setup global error handler:', setupError);
+      }
     }
   }
 
   private setupPromiseRejectionHandler(): void {
-    if (typeof global !== 'undefined' && global.Promise) {
-      global.Promise = class extends Promise<any> {
-        constructor(executor: (resolve: (value: any) => void, reject: (reason?: any) => void) => void) {
-          super((resolve, reject) => {
-            executor(resolve, (reason) => {
-              ErrorHandler.getInstance().handleError(
-                ErrorHandler.getInstance().createError(
-                  'UNKNOWN_ERROR',
-                  `Unhandled Promise Rejection: ${reason}`,
-                  'high',
-                  { reason }
-                )
-              );
-              reject(reason);
-            });
-          });
-        }
-      } as any;
+    // FIXED: Better promise rejection handling
+    if (typeof global !== 'undefined') {
+      // Store original Promise for cleanup
+      const originalPromise = global.Promise;
+      
+      // Add unhandled rejection tracking
+      if (typeof global.addEventListener === 'function') {
+        global.addEventListener('unhandledrejection', (event: any) => {
+          this.handleError(
+            this.createError(
+              'UNKNOWN_ERROR',
+              `Unhandled Promise Rejection: ${event.reason}`,
+              'high',
+              { reason: event.reason, event }
+            )
+          );
+        });
+      }
     }
   }
 
@@ -298,9 +291,11 @@ class ErrorHandler {
         this.handleNetworkError(error);
         break;
       case 'STORAGE_ERROR':
+      case 'STORAGE_SAVE_ERROR':
         this.handleStorageError(error);
         break;
       case 'INITIALIZATION_ERROR':
+      case 'USER_INIT_ERROR':
         this.handleInitializationError(error);
         break;
       case 'DRAWING_ERROR':
@@ -397,18 +392,21 @@ class ErrorHandler {
     const retryableCategories: ErrorCategory[] = [
       'NETWORK_ERROR',
       'STORAGE_ERROR',
+      'STORAGE_SAVE_ERROR',
     ];
     
     return retryableCategories.includes(category);
   }
 
   private getUserFriendlyMessage(category: ErrorCategory, technicalMessage: string): string {
-    const messages: Record<ErrorCategory, string> = {
+    const messages: Partial<Record<ErrorCategory, string>> = {
       NETWORK_ERROR: 'Please check your internet connection and try again.',
       VALIDATION_ERROR: 'Please check your input and try again.',
       PERMISSION_ERROR: 'You don\'t have permission to perform this action.',
       STORAGE_ERROR: 'We\'re having trouble saving your data. Please try again.',
+      STORAGE_SAVE_ERROR: 'Failed to save your progress. Please try again.',
       INITIALIZATION_ERROR: 'The app is having trouble starting up. Please restart.',
+      USER_INIT_ERROR: 'There was a problem setting up your account.',
       DRAWING_ERROR: 'Something went wrong with the drawing canvas.',
       LEARNING_ERROR: 'We encountered an issue with the lesson.',
       USER_ERROR: 'There was a problem with your account.',
@@ -416,7 +414,7 @@ class ErrorHandler {
       UNKNOWN_ERROR: 'An unexpected error occurred. Please try again.',
     };
 
-    return messages[category] || messages.UNKNOWN_ERROR;
+    return messages[category] || messages.UNKNOWN_ERROR || 'An unexpected error occurred.';
   }
 
   private getLogLevel(severity: ErrorSeverity): 'log' | 'warn' | 'error' {
@@ -457,21 +455,25 @@ class ErrorHandler {
   public cleanup(): void {
     // Restore original global error handler
     if (this.originalGlobalHandler && typeof global !== 'undefined' && global.ErrorUtils) {
-      global.ErrorUtils.setGlobalHandler(this.originalGlobalHandler);
+      try {
+        global.ErrorUtils.setGlobalHandler(this.originalGlobalHandler);
+      } catch (cleanupError) {
+        console.warn('Failed to restore original error handler:', cleanupError);
+      }
     }
     
     // Clear error queue
     this.errorQueue = [];
     this.errorCount = 0;
-    this.isInitialized = false;
+    this.initialized = false;
     
     console.log('🧹 ErrorHandler cleaned up');
   }
 
   // =================== PUBLIC UTILITIES ===================
 
-  public isInitialized(): boolean {
-    return this.isInitialized;
+  public isInitialized(): boolean {  // FIXED: Renamed method to avoid conflicts
+    return this.initialized;
   }
 
   public getErrorCount(): number {
@@ -495,6 +497,7 @@ class ErrorHandler {
 // =================== EXPORTS ===================
 
 export const errorHandler = ErrorHandler.getInstance();
+export { ErrorHandler }; // FIXED: Also export the class
 
 export function handleError(error: Error | StructuredError): void {
   errorHandler.handleError(error);

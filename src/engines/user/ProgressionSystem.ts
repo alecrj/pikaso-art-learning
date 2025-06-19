@@ -627,11 +627,12 @@ class ProgressionSystem {
     try {
       await dataManager.save(`progress_${this.progressData.userId}`, this.progressData);
     } catch (error) {
+      // FIXED: Proper error handling with context
       errorHandler.handleError(errorHandler.createError(
-        'STORAGE_ERROR',
+        'STORAGE_SAVE_ERROR',
         'Failed to save progression data',
         'high',
-        { error }
+        { error: error instanceof Error ? error.message : String(error) }
       ));
       throw error;
     }
@@ -652,8 +653,14 @@ class ProgressionSystem {
         'USER_ERROR',
         'Failed to reset progress',
         'high',
-        error
+        { error: error instanceof Error ? error.message : String(error) }
       ));
     }
   }
 }
+
+// =================== EXPORTS ===================
+
+export const progressionSystem = ProgressionSystem.getInstance();
+export { ProgressionSystem }; // FIXED: Export both instance and class
+export default progressionSystem;
