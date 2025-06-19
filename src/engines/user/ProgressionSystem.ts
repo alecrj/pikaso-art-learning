@@ -652,3 +652,8 @@ class ProgressionSystem {
         'USER_ERROR',
         'Failed to reset progress',
         'high',
+        error
+      ));
+    }
+  }
+}
