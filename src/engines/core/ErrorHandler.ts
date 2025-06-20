@@ -2,7 +2,6 @@
 
 import { Platform } from 'react-native';
 import { EventBus } from './EventBus';
-import { ErrorSeverity, ErrorCategory } from '../../types';
 
 /**
  * ENTERPRISE ERROR HANDLING SYSTEM
@@ -18,12 +17,35 @@ import { ErrorSeverity, ErrorCategory } from '../../types';
  * - React Native compatibility
  */
 
-// FIXED: Properly handle React Native's global ErrorUtils
+// FIXED: Define our own error severity and category types
+export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
+export type ErrorCategory = 
+  | 'NETWORK_ERROR'
+  | 'VALIDATION_ERROR'
+  | 'PERMISSION_ERROR'
+  | 'STORAGE_ERROR'
+  | 'STORAGE_SAVE_ERROR'
+  | 'INITIALIZATION_ERROR'
+  | 'USER_INIT_ERROR'
+  | 'DRAWING_ERROR'
+  | 'LEARNING_ERROR'
+  | 'PROGRESS_LOAD_ERROR'
+  | 'LESSON_COMPLETE_ERROR'
+  | 'PROGRESS_SAVE_ERROR'
+  | 'USER_ERROR'
+  | 'COMMUNITY_ERROR'
+  | 'UNKNOWN_ERROR';
+
+// FIXED: Properly handle React Native's global ErrorUtils without conflicts
+interface ReactNativeErrorUtils {
+  setGlobalHandler: (handler: (error: Error, isFatal?: boolean) => void) => void;
+  getGlobalHandler: () => (error: Error, isFatal?: boolean) => void;
+}
+
 declare global {
-  var ErrorUtils: {
-    setGlobalHandler: (handler: (error: Error, isFatal?: boolean) => void) => void;
-    getGlobalHandler: () => (error: Error, isFatal?: boolean) => void;
-  } | undefined;
+  interface Global {
+    ErrorUtils?: ReactNativeErrorUtils;
+  }
 }
 
 export interface StructuredError extends Error {
@@ -82,7 +104,7 @@ class ErrorHandler {
   private errorCount: number = 0;
   private sessionId: string;
   private errorQueue: StructuredError[] = [];
-  private initialized: boolean = false;  // FIXED: Renamed to avoid conflicts
+  private initialized: boolean = false;
   private originalGlobalHandler?: (error: Error, isFatal?: boolean) => void;
 
   private constructor() {
@@ -115,12 +137,13 @@ class ErrorHandler {
   }
 
   private setupGlobalErrorHandler(): void {
-    // FIXED: Properly check for React Native's ErrorUtils
-    if (typeof global !== 'undefined' && global.ErrorUtils) {
-      try {
-        this.originalGlobalHandler = global.ErrorUtils.getGlobalHandler();
+    // FIXED: Safely check for React Native's ErrorUtils
+    try {
+      const globalRef = global as Global;
+      if (globalRef.ErrorUtils) {
+        this.originalGlobalHandler = globalRef.ErrorUtils.getGlobalHandler();
         
-        global.ErrorUtils.setGlobalHandler((error: Error, isFatal?: boolean) => {
+        globalRef.ErrorUtils.setGlobalHandler((error: Error, isFatal?: boolean) => {
           this.handleError(this.createError(
             'UNKNOWN_ERROR',
             error.message,
@@ -137,20 +160,16 @@ class ErrorHandler {
             this.originalGlobalHandler(error, isFatal);
           }
         });
-      } catch (setupError) {
-        console.warn('Failed to setup global error handler:', setupError);
       }
+    } catch (setupError) {
+      console.warn('Failed to setup global error handler:', setupError);
     }
   }
 
   private setupPromiseRejectionHandler(): void {
-    // FIXED: Better promise rejection handling
-    if (typeof global !== 'undefined') {
-      // Store original Promise for cleanup
-      const originalPromise = global.Promise;
-      
-      // Add unhandled rejection tracking
-      if (typeof global.addEventListener === 'function') {
+    // FIXED: Better promise rejection handling for React Native
+    try {
+      if (typeof global !== 'undefined' && typeof global.addEventListener === 'function') {
         global.addEventListener('unhandledrejection', (event: any) => {
           this.handleError(
             this.createError(
@@ -162,6 +181,8 @@ class ErrorHandler {
           );
         });
       }
+    } catch (setupError) {
+      console.warn('Failed to setup promise rejection handler:', setupError);
     }
   }
 
@@ -260,7 +281,7 @@ class ErrorHandler {
         version: Platform.Version.toString(),
       },
       appState: {
-        version: '1.0.0', // Should be dynamically set
+        version: '1.0.0',
         environment: this.config.environment,
         sessionId: this.sessionId,
       },
@@ -270,14 +291,7 @@ class ErrorHandler {
     };
 
     try {
-      // In production, this would send to your error reporting service
       console.log('📤 Reporting error:', report);
-      
-      // Example: await fetch(this.config.errorReportingEndpoint, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(report),
-      // });
     } catch (reportingError) {
       console.error('Failed to report error:', reportingError);
     }
@@ -345,14 +359,12 @@ class ErrorHandler {
   // =================== USER NOTIFICATION ===================
 
   private shouldNotifyUser(error: StructuredError): boolean {
-    // Don't notify for low severity or development-only errors
     if (error.severity === 'low' || this.config.environment === 'development') {
       return false;
     }
 
-    // Don't spam the user with too many error notifications
     const recentErrors = this.errorQueue.filter(
-      e => Date.now() - e.timestamp < 60000 // Last minute
+      e => Date.now() - e.timestamp < 60000
     );
     
     return recentErrors.length <= 3;
@@ -446,23 +458,21 @@ class ErrorHandler {
   }
 
   private getAppStartTime(): number {
-    // In a real app, this would be tracked from app start
-    return Date.now() - (5 * 60 * 1000); // Mock 5 minutes uptime
+    return Date.now() - (5 * 60 * 1000);
   }
 
   // =================== CLEANUP ===================
 
   public cleanup(): void {
-    // Restore original global error handler
-    if (this.originalGlobalHandler && typeof global !== 'undefined' && global.ErrorUtils) {
-      try {
-        global.ErrorUtils.setGlobalHandler(this.originalGlobalHandler);
-      } catch (cleanupError) {
-        console.warn('Failed to restore original error handler:', cleanupError);
+    try {
+      const globalRef = global as Global;
+      if (this.originalGlobalHandler && globalRef.ErrorUtils) {
+        globalRef.ErrorUtils.setGlobalHandler(this.originalGlobalHandler);
       }
+    } catch (cleanupError) {
+      console.warn('Failed to restore original error handler:', cleanupError);
     }
     
-    // Clear error queue
     this.errorQueue = [];
     this.errorCount = 0;
     this.initialized = false;
@@ -472,7 +482,7 @@ class ErrorHandler {
 
   // =================== PUBLIC UTILITIES ===================
 
-  public isInitialized(): boolean {  // FIXED: Renamed method to avoid conflicts
+  public isInitialized(): boolean {
     return this.initialized;
   }
 
@@ -497,7 +507,7 @@ class ErrorHandler {
 // =================== EXPORTS ===================
 
 export const errorHandler = ErrorHandler.getInstance();
-export { ErrorHandler }; // FIXED: Also export the class
+export { ErrorHandler };
 
 export function handleError(error: Error | StructuredError): void {
   errorHandler.handleError(error);

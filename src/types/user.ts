@@ -5,11 +5,13 @@ export interface User {
   id: string;
   email?: string;
   displayName: string;
+  username?: string;
   avatar?: string;
+  bio?: string;
   skillLevel: SkillLevel;
   joinedDate: string;
   lastActiveDate: string;
-  learningGoals?: string[]; // FIXED: Added missing property
+  learningGoals?: string[];
   preferences: {
     notifications: boolean;
     darkMode: boolean;

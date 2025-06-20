@@ -1,28 +1,17 @@
 // src/engines/user/PortfolioManager.ts - ENTERPRISE GRADE FIXED VERSION
-import { Artwork, Layer, Collection } from '../../types';
 import { EventBus } from '../core/EventBus';
 import { errorHandler } from '../core/ErrorHandler';
 import { dataManager } from '../core/DataManager';
 
-interface Portfolio {
-  id: string;
-  userId: string;
-  artworks: Artwork[];
-  collections: Collection[];
-  stats: {
-    totalArtworks: number;
-    publicArtworks: number;
-    totalLikes: number;
-    totalViews: number;
-    averageTimeSpent: number;
-    followerCount: number;
-  };
-  settings: {
-    publicProfile: boolean;
-    showProgress: boolean;
-    allowComments: boolean;
-  };
-}
+// FIXED: Export types properly from main types
+import type { 
+  Artwork, 
+  Layer, 
+  Collection,
+  Portfolio,
+  PortfolioItem,
+  PortfolioStats
+} from '../../types';
 
 /**
  * ENTERPRISE PORTFOLIO MANAGER
@@ -33,6 +22,7 @@ interface Portfolio {
  * - Guest user support for non-authenticated scenarios
  * - Enterprise-level error handling and recovery
  * - Comprehensive analytics and performance tracking
+ * - Proper type exports
  */
 export class PortfolioManager {
   private static instance: PortfolioManager;
@@ -104,12 +94,19 @@ export class PortfolioManager {
    */
   private initializeGuestUser(): void {
     // Check if we have a stored guest user
-    const storedGuestId = localStorage?.getItem('pikaso_guest_user_id');
-    if (storedGuestId) {
-      this.currentUserId = storedGuestId;
-    } else {
+    try {
+      const storedGuestId = typeof localStorage !== 'undefined' ? localStorage.getItem('pikaso_guest_user_id') : null;
+      if (storedGuestId) {
+        this.currentUserId = storedGuestId;
+      } else {
+        this.currentUserId = `guest_${Date.now()}_${this.guestUserCounter++}`;
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('pikaso_guest_user_id', this.currentUserId);
+        }
+      }
+    } catch (error) {
+      // Fallback if localStorage is not available
       this.currentUserId = `guest_${Date.now()}_${this.guestUserCounter++}`;
-      localStorage?.setItem('pikaso_guest_user_id', this.currentUserId);
     }
   }
 
@@ -159,6 +156,13 @@ export class PortfolioManager {
     }
     
     return portfolio; // Always returns Portfolio | null, never undefined
+  }
+
+  /**
+   * FIXED: Get current user's portfolio with proper fallback
+   */
+  public getCurrentUserPortfolio(): Portfolio | null {
+    return this.getUserPortfolio();
   }
 
   public addArtwork(artworkData: Omit<Artwork, 'id' | 'userId' | 'createdAt' | 'updatedAt'>, userId?: string): Artwork {
@@ -217,6 +221,19 @@ export class PortfolioManager {
     this.eventBus.emit('artwork:created', { artwork, userId: targetUserId });
 
     return artwork;
+  }
+
+  /**
+   * FIXED: Save artwork method that works with the user context system
+   */
+  public async saveArtwork(artworkData: any): Promise<string> {
+    try {
+      const artwork = this.addArtwork(artworkData);
+      return artwork.id;
+    } catch (error) {
+      console.error('Failed to save artwork:', error);
+      throw error;
+    }
   }
 
   // =================== ENGAGEMENT METHODS ===================
@@ -482,5 +499,8 @@ export class PortfolioManager {
   }
 }
 
-// Export singleton instance
+// FIXED: Export all types and the singleton instance
 export const portfolioManager = PortfolioManager.getInstance();
+
+// Re-export types for convenience
+export type { Portfolio, PortfolioItem, PortfolioStats } from '../../types';

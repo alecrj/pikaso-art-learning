@@ -28,6 +28,8 @@ export interface ProfileUpdate {
   showProgress?: boolean;
   showArtwork?: boolean;
   preferences?: Partial<UserProfile['preferences']>;
+  // FIXED: Added learningGoals to ProfileUpdate interface
+  learningGoals?: string[];
 }
 
 export interface UserStatUpdate {
@@ -74,7 +76,7 @@ class ProfileSystem {
         'USER_ERROR',
         'Failed to load user profile',
         'medium',
-        { error }
+        { error: error as Error }
       ));
       return null;
     }
@@ -90,6 +92,7 @@ class ProfileSystem {
     displayName: string;
     email?: string;
     skillLevel: UserProfile['skillLevel'];
+    learningGoals?: string[]; // FIXED: Added learningGoals parameter
   }): Promise<UserProfile> {
     try {
       const profile: UserProfile = {
@@ -110,8 +113,8 @@ class ProfileSystem {
         showProgress: true,
         showArtwork: true,
         
-        // Learning Goals
-        learningGoals: [],
+        // Learning Goals - FIXED: Use provided goals or empty array
+        learningGoals: data.learningGoals || [],
         
         // Statistics - Complete stats object
         stats: {
@@ -152,7 +155,7 @@ class ProfileSystem {
         'USER_ERROR',
         'Failed to create user profile',
         'high',
-        { error, data }
+        { error: error as Error, data }
       ));
       throw error;
     }
@@ -172,6 +175,8 @@ class ProfileSystem {
           ...this.currentProfile.preferences,
           ...updates.preferences,
         },
+        // FIXED: Handle learningGoals update properly
+        learningGoals: updates.learningGoals !== undefined ? updates.learningGoals : this.currentProfile.learningGoals,
       };
       
       await dataManager.saveUserProfile(updatedProfile);
@@ -190,7 +195,7 @@ class ProfileSystem {
         'USER_ERROR',
         'Failed to update user profile',
         'medium',
-        { error, updates }
+        { error: error as Error, updates }
       ));
       throw error;
     }
@@ -217,7 +222,7 @@ class ProfileSystem {
         'USER_ERROR',
         'Failed to fetch user profile',
         'low',
-        { error, userId }
+        { error: error as Error, userId }
       ));
       return null;
     }
@@ -247,7 +252,7 @@ class ProfileSystem {
         'USER_ERROR',
         'Failed to add XP',
         'medium',
-        { error, amount, source }
+        { error: error as Error, amount, source }
       ));
     }
   }
@@ -277,7 +282,7 @@ class ProfileSystem {
         'USER_ERROR',
         'Failed to update avatar',
         'medium',
-        { error }
+        { error: error as Error }
       ));
       throw error;
     }
@@ -316,7 +321,7 @@ class ProfileSystem {
         'COMMUNITY_ERROR',
         'Failed to follow user',
         'medium',
-        { error, userId }
+        { error: error as Error, userId }
       ));
       throw error;
     }
@@ -348,7 +353,7 @@ class ProfileSystem {
         'COMMUNITY_ERROR',
         'Failed to unfollow user',
         'medium',
-        { error, userId }
+        { error: error as Error, userId }
       ));
       throw error;
     }
@@ -396,7 +401,7 @@ class ProfileSystem {
         'USER_ERROR',
         'Failed to update profile stats',
         'low',
-        { error, stats: statsUpdate }
+        { error: error as Error, stats: statsUpdate }
       ));
     }
   }
@@ -423,7 +428,7 @@ class ProfileSystem {
         'USER_ERROR',
         'Failed to update learning goals',
         'low',
-        { error, goals }
+        { error: error as Error, goals }
       ));
     }
   }
@@ -467,7 +472,7 @@ class ProfileSystem {
         'USER_ERROR',
         'Failed to delete profile',
         'high',
-        { error }
+        { error: error as Error }
       ));
       throw error;
     }

@@ -1,3 +1,4 @@
+// Fixed src/contexts/UserProgressContext.tsx - COMPLETE FIXED VERSION
 import React, {
   createContext,
   useContext,
@@ -372,14 +373,18 @@ export function UserProgressProvider({ children }: { children: ReactNode }) {
   const xpProgress = useMemo(() => progress?.xpProgress || 0, [progress]);
   const streakDays = useMemo(() => progress?.streakDays || 0, [progress]);
 
-  // Storage operations
+  // FIXED: Storage operations with proper error handling
   const saveToStorage = useCallback(async (key: string, data: any) => {
     try {
       await AsyncStorage.setItem(key, JSON.stringify(data));
     } catch (error) {
       console.error(`Failed to save ${key}:`, error);
       errorHandler.handleError(
-        errorHandler.createError('STORAGE_SAVE_ERROR', `Failed to save ${key}`, 'medium', error)
+        errorHandler.createError('STORAGE_SAVE_ERROR', `Failed to save ${key}`, 'medium', { 
+          error: error instanceof Error ? error.message : String(error),
+          key,
+          timestamp: Date.now()
+        })
       );
     }
   }, []);
@@ -405,7 +410,7 @@ export function UserProgressProvider({ children }: { children: ReactNode }) {
     }, 1000);
   }, [saveToStorage]);
 
-  // Initialize user data
+  // FIXED: Initialize user data with proper error handling
   const initialize = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -446,7 +451,10 @@ export function UserProgressProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('❌ Failed to initialize user progress:', error);
       errorHandler.handleError(
-        errorHandler.createError('USER_INIT_ERROR', 'Failed to initialize user progress', 'high', error)
+        errorHandler.createError('USER_INIT_ERROR', 'Failed to initialize user progress', 'high', {
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: Date.now()
+        })
       );
     } finally {
       setIsLoading(false);

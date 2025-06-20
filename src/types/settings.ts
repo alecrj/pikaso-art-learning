@@ -25,10 +25,18 @@ export interface AppSettings {
     
     // ===== NOTIFICATIONS =====
     notifications: {
+      enabled: boolean;
+      dailyReminder: boolean;
+      achievementAlerts: boolean;
+      challengeAlerts: boolean;
+      reminderTime: string;
       lessons: boolean;
       achievements: boolean;
       social: boolean;
       challenges: boolean;
+      lessonCompletions?: boolean;
+      achievementUnlocks?: boolean;
+      socialActivity?: boolean;
     };
     
     // ===== DRAWING SETTINGS =====
@@ -37,6 +45,10 @@ export interface AppSettings {
       smoothing: number;
       autosave: boolean;
       hapticFeedback: boolean;
+      defaultBrush?: string;
+      palmRejection?: boolean;
+      leftHanded?: boolean;
+      smoothingLevel?: number;
       maxUndoHistory?: number;
       canvasResolution?: 'standard' | 'high' | 'ultra';
       antiAliasing?: boolean;
@@ -59,6 +71,9 @@ export interface AppSettings {
       shareProgress: boolean;
       allowComments: boolean;
       analyticsOptIn: boolean;
+      showProgress?: boolean;
+      allowMessages?: boolean;
+      portfolioVisibility?: 'public' | 'friends' | 'private';
     };
     
     // ===== ACCESSIBILITY =====
@@ -98,10 +113,18 @@ export interface AppSettings {
     theme: 'auto',
     
     notifications: {
+      enabled: true,
+      dailyReminder: true,
+      achievementAlerts: true,
+      challengeAlerts: true,
+      reminderTime: '19:00',
       lessons: true,
       achievements: true,
       social: true,
       challenges: true,
+      lessonCompletions: true,
+      achievementUnlocks: true,
+      socialActivity: true,
     },
     
     drawing: {
@@ -109,6 +132,10 @@ export interface AppSettings {
       smoothing: 0.5,
       autosave: true,
       hapticFeedback: true,
+      defaultBrush: 'round',
+      palmRejection: true,
+      leftHanded: false,
+      smoothingLevel: 0.5,
       maxUndoHistory: 50,
       canvasResolution: 'high',
       antiAliasing: true,
@@ -129,6 +156,9 @@ export interface AppSettings {
       shareProgress: true,
       allowComments: true,
       analyticsOptIn: true,
+      showProgress: true,
+      allowMessages: true,
+      portfolioVisibility: 'public',
     },
     
     accessibility: {

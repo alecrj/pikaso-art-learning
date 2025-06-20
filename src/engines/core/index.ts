@@ -1,12 +1,12 @@
 // src/engines/core/index.ts - ENTERPRISE CORE ENGINE EXPORTS
 
-// FIXED: Export both classes and instances for maximum flexibility
+// FIXED: Properly export both classes and instances
 export { ErrorHandler, errorHandler } from './ErrorHandler';
 export { EventBus } from './EventBus';
 export { dataManager } from './DataManager';
-export { performanceMonitor } from './PerformanceMonitor';
+export { PerformanceMonitor, performanceMonitor } from './PerformanceMonitor';
 
-// Type exports
+// FIXED: Proper type exports with correct names
 export type { 
   StructuredError, 
   ErrorReport, 
@@ -16,6 +16,10 @@ export type {
 } from './ErrorHandler';
 
 export type { PerformanceMetrics } from './PerformanceMonitor';
+
+// Create instances for global access
+const errorHandlerInstance = errorHandler;
+const performanceMonitorInstance = performanceMonitor;
 
 // FIXED: Create a unified core API for enterprise use
 class CoreEngine {
@@ -33,7 +37,7 @@ class CoreEngine {
   public async initialize(): Promise<boolean> {
     try {
       // Initialize error handler first
-      errorHandler.initialize({
+      errorHandlerInstance.initialize({
         enableLogging: true,
         enableReporting: true,
         enableUserNotification: true,
@@ -42,7 +46,7 @@ class CoreEngine {
       });
 
       // Start performance monitoring
-      performanceMonitor.startMonitoring();
+      performanceMonitorInstance.startMonitoring();
 
       console.log('🚀 Core Engine initialized successfully');
       return true;
@@ -54,8 +58,8 @@ class CoreEngine {
 
   public async cleanup(): Promise<void> {
     try {
-      errorHandler.cleanup();
-      performanceMonitor.stopMonitoring();
+      errorHandlerInstance.cleanup();
+      performanceMonitorInstance.stopMonitoring();
       console.log('🧹 Core Engine cleaned up');
     } catch (error) {
       console.error('❌ Core Engine cleanup failed:', error);
@@ -63,7 +67,7 @@ class CoreEngine {
   }
 
   public isReady(): boolean {
-    return errorHandler.isInitialized() && performanceMonitor.isMonitoring();
+    return errorHandlerInstance.isInitialized() && performanceMonitorInstance.isMonitoring();
   }
 }
 

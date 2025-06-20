@@ -1,4 +1,4 @@
-// src/types/index.ts - ENTERPRISE UNIFIED TYPE SYSTEM
+// src/types/index.ts - ENTERPRISE UNIFIED TYPE SYSTEM V2.0
 
 import { SkPath, SkImage } from '@shopify/react-native-skia';
 import { ReactNode } from 'react';
@@ -14,6 +14,15 @@ export interface Point {
   timestamp: number;
 }
 
+export interface Transform {
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  flipX?: boolean;
+  flipY?: number;
+}
+
 export interface Color {
   hex: string;
   rgb: { r: number; g: number; b: number };
@@ -21,156 +30,25 @@ export interface Color {
   alpha: number;
 }
 
-// ========================== INITIALIZATION TYPES ==========================
+// ========================== DRAWING TYPES - CORE EXPORTS ==========================
 
-export interface InitializationResult {
-  success: boolean;
-  initializedSystems: string[];
-  failedSystems: string[];
-  warnings: string[];
-  errors: string[];  // FIXED: Added missing errors property
-  duration: number;
-  healthStatus: 'healthy' | 'degraded' | 'unhealthy';
-}
-
-// ========================== ERROR TYPES ==========================
-
-export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
-
-// FIXED: Comprehensive error categories for enterprise scale
-export type ErrorCategory = 
-  | 'NETWORK_ERROR'
-  | 'VALIDATION_ERROR'
-  | 'PERMISSION_ERROR'
-  | 'STORAGE_ERROR'
-  | 'INITIALIZATION_ERROR'
-  | 'DRAWING_ERROR'
-  | 'LEARNING_ERROR'
-  | 'USER_ERROR'
-  | 'COMMUNITY_ERROR'
-  | 'UNKNOWN_ERROR'
-  // Additional categories for complete coverage
-  | 'STORAGE_SAVE_ERROR'
-  | 'USER_INIT_ERROR'
-  | 'CHALLENGE_FETCH_ERROR'
-  | 'CHALLENGE_CREATE_ERROR'
-  | 'USER_STATS_ERROR'
-  | 'SUBMISSION_ERROR'
-  | 'VOTING_ERROR'
-  | 'STATS_ERROR'
-  | 'SAVE_ERROR'
-  | 'LOAD_ERROR'
-  | 'PROGRESS_LOAD_ERROR'
-  | 'LESSON_COMPLETE_ERROR'
-  | 'PROGRESS_SAVE_ERROR'
-  | 'ARTWORK_LIKE_ERROR'
-  | 'ARTWORK_VIEW_ERROR'
-  | 'PORTFOLIO_LOAD_ERROR'
-  | 'PORTFOLIO_SAVE_ERROR';
-
-export interface ErrorBoundaryProps {
-  children: ReactNode;
-  fallback?: ReactNode;
-  onError?: (error: Error, errorInfo: any) => void;
-}
-
-export interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-  errorInfo: any;
-  errorId?: string;
-}
-
-// ========================== APP SETTINGS TYPES ==========================
-
-// UNIFIED APP SETTINGS - Enterprise Grade
-export interface AppSettings {
-  [key: string]: any;
-  
-  // Metadata
-  version: number;
-  lastUpdated: number;
-  
-  // Appearance
-  theme: 'auto' | 'light' | 'dark';
-  
-  // UNIFIED NOTIFICATIONS STRUCTURE
-  notifications: {
-    enabled: boolean;
-    dailyReminder: boolean;
-    achievementAlerts: boolean;
-    challengeAlerts: boolean;
-    reminderTime: string;
-    // Extended enterprise notifications
-    lessons: boolean;
-    achievements: boolean;
-    social: boolean;
-    challenges: boolean;
-    lessonCompletions: boolean;
-    achievementUnlocks: boolean;
-    socialActivity: boolean;
-  };
-  
-  // Drawing Settings
-  drawing: {
-    pressureSensitivity: number;
-    smoothing: number;
-    autosave: boolean;
-    hapticFeedback: boolean;
-    maxUndoHistory?: number;
-    canvasResolution?: 'standard' | 'high' | 'ultra';
-    antiAliasing?: boolean;
-  };
-  
-  // Learning Settings
-  learning: {
-    dailyGoal: number;
-    reminderTime: string;
-    difficulty: 'easy' | 'adaptive' | 'hard';
-    skipIntroVideos?: boolean;
-    autoAdvance?: boolean;
-    practiceMode?: 'guided' | 'free' | 'mixed';
-  };
-  
-  // UNIFIED PRIVACY SETTINGS
-  privacy: {
-    profileVisibility: 'public' | 'friends' | 'private';
-    shareArtwork: boolean;
-    shareProgress: boolean;
-    allowComments: boolean;
-    analyticsOptIn: boolean;
-    showProgress?: boolean;
-    allowMessages?: boolean;
-    portfolioVisibility?: 'public' | 'friends' | 'private';
-  };
-  
-  // UNIFIED ACCESSIBILITY SETTINGS
-  accessibility: {
-    fontSize: 'small' | 'medium' | 'large' | 'extra-large';
-    highContrast: boolean;
-    reducedMotion: boolean;
-    screenReader: boolean;
-    colorBlindSupport: 'none' | 'deuteranopia' | 'protanopia' | 'tritanopia';
-  };
-  
-  // Performance Settings
-  performance?: {
-    enableGPUAcceleration: boolean;
-    frameRateLimit: 30 | 60 | 120;
-    memoryOptimization: 'low' | 'balanced' | 'high';
-    backgroundProcessing: boolean;
-  };
-  
-  // Experimental Features
-  experimental?: {
-    betaFeatures: boolean;
-    aiAssistance: boolean;
-    cloudSync: boolean;
-    collaborativeDrawing: boolean;
-  };
-}
-
-// ========================== DRAWING TYPES ==========================
+export type Tool = 
+  | 'brush'
+  | 'eraser'
+  | 'smudge'
+  | 'blur'
+  | 'sharpen'
+  | 'clone'
+  | 'selection'
+  | 'transform'
+  | 'text'
+  | 'shape'
+  | 'eyedropper'
+  | 'fill'
+  | 'gradient'
+  | 'liquify'
+  | 'perspective'
+  | 'reference';
 
 export type DrawingTool = 'brush' | 'eraser' | 'move' | 'select' | 'zoom';
 export type DrawingMode = 'normal' | 'reference' | 'guided' | 'timelapse';
@@ -314,9 +192,148 @@ export interface DrawingState {
   savedPalettes: Color[][];
 }
 
+// ========================== INITIALIZATION TYPES ==========================
+
+export interface InitializationResult {
+  success: boolean;
+  initializedSystems: string[];
+  failedSystems: string[];
+  warnings: string[];
+  errors: string[];
+  duration: number;
+  healthStatus: 'healthy' | 'degraded' | 'unhealthy';
+}
+
+// ========================== ERROR TYPES ==========================
+
+export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export type ErrorCategory = 
+  | 'NETWORK_ERROR'
+  | 'VALIDATION_ERROR'
+  | 'PERMISSION_ERROR'
+  | 'STORAGE_ERROR'
+  | 'INITIALIZATION_ERROR'
+  | 'DRAWING_ERROR'
+  | 'LEARNING_ERROR'
+  | 'USER_ERROR'
+  | 'COMMUNITY_ERROR'
+  | 'UNKNOWN_ERROR'
+  | 'STORAGE_SAVE_ERROR'
+  | 'USER_INIT_ERROR'
+  | 'CHALLENGE_FETCH_ERROR'
+  | 'CHALLENGE_CREATE_ERROR'
+  | 'USER_STATS_ERROR'
+  | 'SUBMISSION_ERROR'
+  | 'VOTING_ERROR'
+  | 'STATS_ERROR'
+  | 'SAVE_ERROR'
+  | 'LOAD_ERROR'
+  | 'PROGRESS_LOAD_ERROR'
+  | 'LESSON_COMPLETE_ERROR'
+  | 'PROGRESS_SAVE_ERROR'
+  | 'ARTWORK_LIKE_ERROR'
+  | 'ARTWORK_VIEW_ERROR'
+  | 'PORTFOLIO_LOAD_ERROR'
+  | 'PORTFOLIO_SAVE_ERROR';
+
+export interface ErrorBoundaryProps {
+  children: ReactNode;
+  fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: any) => void;
+}
+
+export interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+  errorInfo: any;
+  errorId?: string;
+}
+
+// ========================== UNIFIED APP SETTINGS ==========================
+
+export interface AppSettings {
+  [key: string]: any;
+  
+  version: number;
+  lastUpdated: number;
+  theme: 'auto' | 'light' | 'dark';
+  
+  notifications: {
+    enabled: boolean;
+    dailyReminder: boolean;
+    achievementAlerts: boolean;
+    challengeAlerts: boolean;
+    reminderTime: string;
+    lessons: boolean;
+    achievements: boolean;
+    social: boolean;
+    challenges: boolean;
+    lessonCompletions?: boolean;
+    achievementUnlocks?: boolean;
+    socialActivity?: boolean;
+  };
+  
+  drawing: {
+    pressureSensitivity: number;
+    smoothing: number;
+    autosave: boolean;
+    hapticFeedback: boolean;
+    defaultBrush?: string;
+    palmRejection?: boolean;
+    leftHanded?: boolean;
+    smoothingLevel?: number;
+    maxUndoHistory?: number;
+    canvasResolution?: 'standard' | 'high' | 'ultra';
+    antiAliasing?: boolean;
+  };
+  
+  learning: {
+    dailyGoal: number;
+    reminderTime: string;
+    difficulty: 'easy' | 'adaptive' | 'hard';
+    skipIntroVideos?: boolean;
+    autoAdvance?: boolean;
+    practiceMode?: 'guided' | 'free' | 'mixed';
+  };
+  
+  privacy: {
+    profileVisibility: 'public' | 'friends' | 'private';
+    shareArtwork: boolean;
+    shareProgress: boolean;
+    allowComments: boolean;
+    analyticsOptIn: boolean;
+    showProgress?: boolean;
+    allowMessages?: boolean;
+    portfolioVisibility?: 'public' | 'friends' | 'private';
+  };
+  
+  accessibility: {
+    fontSize: 'small' | 'medium' | 'large' | 'extra-large';
+    highContrast: boolean;
+    reducedMotion: boolean;
+    screenReader: boolean;
+    colorBlindSupport: 'none' | 'deuteranopia' | 'protanopia' | 'tritanopia';
+  };
+  
+  performance?: {
+    enableGPUAcceleration: boolean;
+    frameRateLimit: 30 | 60 | 120;
+    memoryOptimization: 'low' | 'balanced' | 'high';
+    backgroundProcessing: boolean;
+  };
+  
+  experimental?: {
+    betaFeatures: boolean;
+    aiAssistance: boolean;
+    cloudSync: boolean;
+    collaborativeDrawing: boolean;
+  };
+}
+
 // ========================== LEARNING TYPES ==========================
 
-export type SkillLevel = 'beginner' | 'intermediate' | 'advanced' | 'professional';
+export type SkillLevel = 'beginner' | 'intermediate' | 'advanced';
 export type LessonType = 'theory' | 'practice' | 'challenge' | 'guided' | 'assessment' | 'video';
 export type LessonStatus = 'locked' | 'available' | 'in_progress' | 'completed' | 'mastered' | 'in-progress';
 
@@ -328,6 +345,19 @@ export interface ValidationRule {
   target?: any;
   tolerance?: number;
   targets?: string[];
+}
+
+// FIXED: Complete ValidationResult interface
+export interface ValidationResult {
+  isValid?: boolean; // Legacy support
+  isCorrect?: boolean; // Current standard
+  score?: number;
+  feedback?: string;
+  details?: Record<string, any>;
+  explanation?: string;
+  xpAwarded?: number;
+  showHint?: boolean;
+  hint?: string;
 }
 
 export interface LearningObjective {
@@ -370,79 +400,34 @@ export interface LessonContent {
   demonstration?: string;
 }
 
-export interface TheorySegment {
-  id: string;
-  type: 'text' | 'image' | 'video' | 'interactive';
-  content: string | {
-    text?: string;
-    demo?: string;
-    title?: string;
-    instructions?: string;
-    url?: string;
-  };
-  duration: number;
-  order: number;
-  interactive?: boolean;
-}
-
-export interface PracticeInstruction {
-  id: string;
-  text: string;
-  type: 'draw' | 'observe' | 'compare' | 'trace' | 'select' | 'analyze';
-  hint?: string;
-  expectedResult?: string;
-  validation?: ValidationRule;
-  order: number;
-  highlightArea?: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-}
-
-export interface AssessmentCriteria {
-  id: string;
-  name: string;
-  description: string;
-  weight: number;
-  passingScore: number;
-  evaluationType?: 'automatic' | 'manual';
-}
-
-export interface Assessment {
-  criteria: AssessmentCriteria[];
-  passingScore: number;
-  maxAttempts?: number;
-  bonusObjectives?: {
-    id: string;
-    description: string;
-    xpBonus: number;
-  }[];
-}
-
 export interface TheoryContent {
-  segments: TheorySegment[];
+  segments: Array<{
+    id: string;
+    type: string;
+    content: string;
+    duration: number;
+    order: number;
+  }>;
   totalDuration: number;
   objectives: LearningObjective[];
 }
 
+// FIXED: PracticeContent interface with instructions
 export interface PracticeContent {
-  instructions: PracticeInstruction[];
-  hints: {
+  instructions?: string[]; // Support for legacy content
+  steps: Array<{
     id: string;
-    stepIndex: number;
-    text: string;
-    content?: string;
-    triggerCondition?: string;
-  }[];
-  referenceImage?: string;
-  canvas: {
-    width: number;
-    height: number;
-    backgroundColor: string;
-  };
-  expectedDuration: number;
+    type: string;
+    instruction: string;
+    demonstration?: string;
+    validation?: ValidationRule;
+    hints?: string[];
+    xpReward?: number;
+    order: number;
+  }>;
+  timeLimit?: number;
+  requiredAccuracy?: number;
+  objectives: LearningObjective[];
 }
 
 export interface Lesson {
@@ -457,9 +442,6 @@ export interface Lesson {
   prerequisites: string[];
   content: LessonContent[];
   objectives: LearningObjective[];
-  theoryContent?: TheoryContent;
-  practiceContent?: PracticeContent;
-  assessment?: Assessment;
   rewards: {
     xp: number;
     achievements?: string[];
@@ -476,27 +458,8 @@ export interface Lesson {
   duration?: number;
   skillTreeId?: string;
   unlockRequirements?: string[];
-}
-
-export interface LessonProgress {
-  lessonId: string;
-  contentProgress: number;
-  currentContentIndex: number;
-  totalContent: number;
-  score: number;
-  timeSpent: number;
-  completed: boolean;
-  startedAt: string;
-  completedAt?: string;
-}
-
-export interface ValidationResult {
-  isCorrect: boolean;
-  feedback: string;
-  explanation?: string;
-  xpAwarded: number;
-  showHint?: boolean;
-  hint?: string;
+  theoryContent?: TheoryContent;
+  practiceContent?: PracticeContent;
 }
 
 export interface SkillTree {
@@ -515,15 +478,6 @@ export interface SkillTree {
   completedAt?: number;
   iconUrl?: string;
   completionPercentage?: number;
-}
-
-export interface SkillTreeProgress {
-  skillTreeId: string;
-  completedLessons: string[];
-  totalXpEarned: number;
-  lastAccessedAt?: Date;
-  lastActivityDate?: string;
-  completionPercentage: number;
 }
 
 export interface LearningProgress {
@@ -545,13 +499,67 @@ export interface LearningProgress {
   dailyGoal: number;
 }
 
+// FIXED: Complete SkillTreeProgress interface
+export interface SkillTreeProgress {
+  skillTreeId: string;
+  lessonsCompleted: string[];
+  completedLessons?: string[]; // Alias for compatibility
+  totalXP: number;
+  totalXpEarned?: number; // Alias for compatibility
+  completionPercentage: number;
+  lastAccessedAt: number;
+  lastActivityDate?: string; // Additional property
+  unlockedAt: number;
+  completedAt?: number;
+}
+
+// FIXED: Complete LessonProgress interface
+export interface LessonProgress {
+  lessonId: string;
+  userId?: string;
+  contentIndex?: number;
+  currentContentIndex?: number; // Current content position
+  completedContent?: string[];
+  score: number;
+  attempts: number;
+  startedAt: number | string; // Support both formats
+  completedAt?: number | string;
+  progress: number;
+  contentProgress?: number; // Detailed progress percentage
+  xpEarned?: number;
+  achievements?: string[];
+  timeSpent?: number; // Time in milliseconds
+  completed?: boolean; // Completion status
+  totalContent?: number; // Total content items
+}
+
+export interface LessonCompletionData {
+  lessonId: string;
+  userId?: string;
+  completedAt: number;
+  score: number;
+  xpEarned: number;
+  timeSpent: number;
+  accuracy?: number;
+  achievements?: string[];
+  streakMaintained?: boolean;
+  attempts?: Record<string, number>;
+}
+
+export type LessonStateCallback = (state: {
+  progress: number;
+  currentContent?: LessonContent;
+  isComplete: boolean;
+  score: number;
+}) => void;
+
+// FIXED: Complete LessonState interface
 export interface LessonState {
   lessonId: string;
   startedAt: Date;
-  pausedAt?: Date;
   theoryProgress: {
     currentSegment: number;
-    completedSegments: number[];
+    completedSegments: string[];
     timeSpent: number;
   };
   practiceProgress: {
@@ -559,87 +567,53 @@ export interface LessonState {
     completedSteps: number[];
     attempts: Record<string, number>;
     hints: string[];
-    timeSpent: number;
+    timeSpent?: number; // Add missing property
   };
   overallProgress: number;
   isPaused: boolean;
+  pausedAt?: Date;
+  xpEarned?: number;
+  achievements?: string[];
 }
 
-export interface LessonCompletionResult {
-  lessonId: string;
-  score: number;
-  xpEarned: number;
-  completed: boolean;
-  perfectScore: boolean;
-  timeSpent: number;
-  achievements: string[];
-}
+// ========================== USER TYPES ==========================
 
-export interface LearningPath {
+export interface User {
   id: string;
-  name: string;
-  description: string;
-  skillTrees: string[];
-  targetSkillLevel: SkillLevel;
-  estimatedWeeks: number;
-  prerequisites: SkillLevel[];
-}
-
-export interface LearningState {
-  currentLesson: Lesson | null;
-  currentSkillTree: SkillTree | null;
-  availableLessons: Lesson[];
-  completedLessons: string[];
-  learningPaths: LearningPath[];
-  skillTrees: SkillTree[];
-  dailyGoal: {
-    target: number;
-    completed: number;
-    streak: number;
-  };
-  weeklyProgress: {
-    lessonsCompleted: number;
-    timeSpent: number;
-    xpGained: number;
-  };
+  email?: string;
+  displayName: string;
+  username?: string;
+  avatar?: string;
+  bio?: string;
+  skillLevel: SkillLevel;
+  joinedDate: string;
+  lastActiveDate: string;
+  learningGoals?: string[];
   preferences: {
-    reminderTime?: string;
-    difficultyPreference: 'adaptive' | 'challenging' | 'comfortable';
-    learningStyle: 'visual' | 'kinesthetic' | 'mixed';
+    notifications: boolean;
+    darkMode: boolean;
+    autoSave: boolean;
+    hapticFeedback: boolean;
   };
 }
 
-// ========================== UNIFIED USER TYPES ==========================
-
-// ENTERPRISE USER PROFILE - Single Source of Truth
 export interface UserProfile {
-  // Core Identity
   id: string;
   username: string;
   displayName: string;
   email?: string;
   avatar?: string;
   bio?: string;
-  
-  // User Level & Experience
   skillLevel: SkillLevel;
   joinedAt: number;
   lastActiveAt: number;
-  
-  // Social
   followers: number;
   following: number;
   isFollowing?: boolean;
-  
-  // Privacy
   isPrivate: boolean;
   showProgress: boolean;
   showArtwork: boolean;
-  
-  // Learning Goals & Progress
   learningGoals: string[];
-  
-  // Statistics
   stats: {
     totalDrawingTime: number;
     totalLessonsCompleted: number;
@@ -650,11 +624,7 @@ export interface UserProfile {
     totalLessons: number;
     totalAchievements: number;
   };
-  
-  // Achievements
   featuredAchievements: string[];
-  
-  // Preferences
   preferences: {
     theme: 'light' | 'dark' | 'auto';
     language: string;
@@ -666,53 +636,21 @@ export interface UserProfile {
   };
 }
 
-// Legacy User interface for backwards compatibility
-export interface User {
-  id: string;
-  username: string;
-  displayName: string;
-  email: string;
-  avatar?: string;
-  bio?: string;
-  following: string[];
-  followers: string[];
-  isVerified?: boolean;
-  isOnline?: boolean;
-  lastSeenAt?: number;
-  level: number;
-  xp: number;
-  totalXP: number;
-  streakDays: number;
-  lastActiveDate: Date;
-  createdAt: Date;
-  updatedAt: Date;
-  preferences: UserPreferences;
-  stats: UserStats;
-  achievements: Achievement[];
-}
-
+// FIXED: Complete UserProgress interface
 export interface UserProgress {
   userId: string;
   level: number;
   xp: number;
-  xpToNextLevel: number;
-  skillPoints: {
-    drawing: number;
-    theory: number;
-    creativity: number;
-    technique: number;
-  };
+  nextLevelXp: number;
+  dailyStreak: number;
+  weeklyProgress: number;
+  monthlyProgress: number;
   achievements: Achievement[];
-  streakDays: number;
-  lastActivityDate: string;
-  learningStats: {
-    lessonsCompleted: number;
-    skillTreesCompleted: number;
-    totalStudyTime: number;
-    averageSessionTime: number;
-    strongestSkills: string[];
-    improvementAreas: string[];
-  };
+  unlockedFeatures: string[];
+  skillProgress: Record<string, SkillProgress>;
+  milestones: Milestone[];
+  recentActivity: XPGain[];
+  lastUpdated: number;
 }
 
 export interface Achievement {
@@ -735,58 +673,6 @@ export interface Achievement {
   iconUrl?: string;
 }
 
-export interface UserPreferences {
-  theme: 'light' | 'dark' | 'auto';
-  language?: string;
-  notifications: {
-    lessons: boolean;
-    achievements: boolean;
-    social: boolean;
-    challenges: boolean;
-    lessonCompletions?: boolean;
-    achievementUnlocks?: boolean;
-    challengeAlerts?: boolean;
-    socialActivity?: boolean;
-  };
-  privacy: {
-    profile: 'public' | 'friends' | 'private';
-    artwork: 'public' | 'friends' | 'private';
-    progress: 'public' | 'friends' | 'private';
-    showProgress?: boolean;
-    allowMessages?: boolean;
-    portfolioVisibility?: 'public' | 'friends' | 'private';
-  };
-  learning?: {
-    dailyGoal: number;
-    reminderTime?: string;
-    difficulty: 'adaptive' | 'challenging' | 'comfortable';
-  };
-  drawingPreferences?: {
-    defaultBrush: string;
-    pressureSensitivity: number;
-    smoothing: number;
-    gridEnabled: boolean;
-    autosaveInterval: number;
-  };
-}
-
-export interface UserStats {
-  totalDrawingTime: number;
-  totalLessonsCompleted: number;
-  totalArtworksCreated: number;
-  currentStreak: number;
-  longestStreak: number;
-  averageSessionTime?: number;
-  favoriteTools?: string[];
-  skillDistribution?: Record<string, number>;
-  artworksCreated: number;
-  artworksShared: number;
-  challengesCompleted: number;
-  skillsUnlocked: number;
-  perfectLessons: number;
-  lessonsCompleted: number;
-}
-
 // ========================== PORTFOLIO TYPES ==========================
 
 export interface Portfolio {
@@ -807,6 +693,42 @@ export interface Portfolio {
     showProgress: boolean;
     allowComments: boolean;
   };
+}
+
+export interface PortfolioItem {
+  id: string;
+  title: string;
+  description?: string;
+  imageUri: string;
+  createdAt: number;
+  lessonId?: string;
+  challengeId?: string;
+  tags: string[];
+  isPublic: boolean;
+  likes: number;
+  viewCount: number;
+  stats: {
+    likes: number;
+    views: number;
+    comments: number;
+    shares: number;
+  };
+  metadata: {
+    timeSpent: number;
+    toolsUsed: string[];
+    skillsApplied: string[];
+  };
+  visibility: 'public' | 'private';
+  featured: boolean;
+}
+
+export interface PortfolioStats {
+  totalArtworks: number;
+  totalLikes: number;
+  totalViews: number;
+  publicArtworks: number;
+  averageTimeSpent: number;
+  followerCount: number;
 }
 
 export interface Artwork {
@@ -884,19 +806,9 @@ export interface Challenge {
   submissions?: ChallengeSubmission[];
   featured?: boolean;
   tags?: string[];
-  prizes?: Prize[];
   winners?: string[];
   status?: 'upcoming' | 'active' | 'completed';
   requirements?: string[];
-}
-
-export interface Prize {
-  id: string;
-  name: string;
-  description: string;
-  type: 'xp' | 'achievement' | 'badge' | 'feature';
-  value: any;
-  place: number;
 }
 
 export interface ChallengeSubmission {
@@ -908,35 +820,8 @@ export interface ChallengeSubmission {
   votes: number;
   rank?: number;
   featured?: boolean;
-  likes?: number;
-  comments?: Comment[];
-  views?: number;
-}
-
-export interface SocialFeed {
-  posts: FeedPost[];
-  hasMore: boolean;
-  lastUpdated: number;
-}
-
-export interface FeedPost {
-  id: string;
-  userId: string;
-  type: 'artwork' | 'achievement' | 'lesson-complete' | 'challenge' | 'milestone';
-  content: {
-    artworkId?: string;
-    achievementId?: string;
-    lessonId?: string;
-    challengeId?: string;
-    text?: string;
-  };
-  createdAt: number;
-  engagement: {
-    likes: number;
-    comments: number;
-    shares: number;
-    isLiked: boolean;
-  };
+  disqualified?: boolean;
+  disqualificationReason?: string;
 }
 
 export interface Comment {
@@ -959,7 +844,7 @@ export interface PerformanceMetrics {
   drawCalls: number;
   inputLatency: number;
   renderTime: number;
-  timestamp: number;  // FIXED: Added missing timestamp property
+  timestamp: number;
 }
 
 export interface AppError {
@@ -970,21 +855,6 @@ export interface AppError {
   timestamp: Date;
   stack?: string;
   userId?: string;
-}
-
-export interface ErrorInfo {
-  code: string;
-  message: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  context?: any;
-  timestamp: Date;
-  userId?: string;
-  sessionId?: string;
-  deviceInfo?: {
-    platform: string;
-    version: string;
-    model: string;
-  };
 }
 
 // ========================== THEME TYPES ==========================
@@ -1062,111 +932,93 @@ export interface UserProgressContextValue {
   getLearningInsights: () => any;
 }
 
+// FIXED: Complete LearningContextType interface
 export interface LearningContextType {
+  // Core lesson state
   currentLesson: Lesson | null;
   lessonState: LessonState | null;
   isLoadingLesson: boolean;
+  error: string | null;
+  
+  // Skill trees and progression
   skillTrees: SkillTree[];
   availableLessons: Lesson[];
   unlockedLessons: string[];
   learningProgress: LearningProgress | null;
   completedLessons: string[];
   currentStreak: number;
-  recommendedLesson: Lesson | null;
-  recommendedLessons: Lesson[];
-  insights: Array<{
+  
+  // UI-specific properties
+  recommendedLesson?: Lesson | null;
+  recommendedLessons?: Lesson[];
+  insights?: Array<{
     id: string;
     type: 'improvement' | 'achievement' | 'suggestion';
     title: string;
     description: string;
     actionable: boolean;
   }>;
-  currentSkillTree: SkillTree | null;
-  setCurrentSkillTree: (skillTree: SkillTree | null) => void;
-  startLesson: (lesson: Lesson) => Promise<void>;
+  currentSkillTree?: SkillTree | null;
+  setCurrentSkillTree?: (skillTree: SkillTree | null) => void;
+  
+  // Core actions
+  initializeLearning?: () => Promise<void>;
+  startLesson: (lessonId: string | Lesson) => Promise<void>; // Support both formats
   pauseLesson: () => Promise<void>;
   resumeLesson: () => Promise<void>;
-  completeLesson: (score?: number) => Promise<void>;
-  exitLesson: () => Promise<void>;
+  completeLesson: (completionData?: any) => Promise<void>;
+  exitLesson?: () => Promise<void>;
   updateProgress: (stepIndex: number, completed: boolean) => Promise<void>;
   addHint: (hint: string) => void;
   validateStep: (stepIndex: number, userInput: any) => Promise<boolean>;
-  getLesson: (lessonId: string) => Lesson | null;
-  getLessonProgress: (lessonId: string) => number;
+  
+  // Utility methods
   getNextLesson: () => Lesson | null;
-  checkUnlockRequirements: (lessonId: string) => boolean;
+  getRecommendedLessons?: () => Lesson[];
+  getDailyProgress: () => number;
+  getLearningInsights: () => any;
+  refreshProgress?: () => Promise<void>;
+  
+  // Additional utilities
+  getLesson?: (lessonId: string) => Lesson | null;
+  getLessonProgress?: (lessonId: string) => number;
+  checkUnlockRequirements?: (lessonId: string) => boolean;
 }
 
-export interface LearningContextValue {
-  state: LearningState;
-  startLesson: (lessonId: string) => Promise<void>;
-  completeLesson: (lessonId: string, score?: number) => Promise<void>;
-  updateLessonProgress: (lessonId: string, progress: number) => void;
-  getAvailableLessons: (skillTreeId?: string) => Lesson[];
-  getRecommendedLessons: () => Lesson[];
-  unlockLesson: (lessonId: string) => void;
-  getLearningProgress: () => any;
-  getSkillTreeProgress: (skillTreeId: string) => number;
-  updateDailyGoal: (target: number) => void;
-  startLearningPath: (pathId: string) => void;
-  getPersonalizedPath: () => LearningPath;
+// ========================== PROGRESS DATA TYPES ==========================
+
+export interface ProgressData {
+  skills: Record<string, number>;
+  totalXP: number;
+  level: number;
+  completedLessons: string[];
+  achievements: string[];
+  streakDays: number;
+  lastActivityDate: string;
 }
 
-// ========================== API TYPES ==========================
-
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
+export interface SkillProgress {
+  skillName: string;
+  xp: number;
+  level: number;
+  lessons: string[];
+  masteryPercentage: number;
 }
 
-export interface PaginatedResponse<T = any> extends ApiResponse<T[]> {
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    hasMore: boolean;
-  };
+export interface Milestone {
+  id: string;
+  name: string;
+  description: string;
+  xpRequired: number;
+  achieved: boolean;
+  achievedAt?: number;
 }
 
-// ========================== EVENT TYPES ==========================
-
-export interface AppEvent {
-  type: string;
-  payload: any;
+export interface XPGain {
+  amount: number;
+  source: string;
   timestamp: number;
-  userId?: string;
-}
-
-export interface DrawingEvent extends AppEvent {
-  type: 'stroke:start' | 'stroke:add' | 'stroke:end' | 'layer:add' | 'layer:delete' | 'canvas:clear';
-  payload: {
-    strokeId?: string;
-    layerId?: string;
-    point?: Point;
-    stroke?: Stroke;
-  };
-}
-
-export interface LearningEvent extends AppEvent {
-  type: 'lesson:start' | 'lesson:complete' | 'skill:unlock' | 'achievement:earn';
-  payload: {
-    lessonId?: string;
-    skillId?: string;
-    achievementId?: string;
-    score?: number;
-    timeSpent?: number;
-  };
-}
-
-export interface UserEvent extends AppEvent {
-  type: 'user:register' | 'user:login' | 'user:logout' | 'artwork:save' | 'artwork:share';
-  payload: {
-    userId?: string;
-    artworkId?: string;
-    platform?: string;
-  };
+  reason?: string;
 }
 
 // ========================== UTILITY TYPES ==========================
@@ -1176,23 +1028,12 @@ export interface Dimensions {
   height: number;
 }
 
-export type AchievementType = 'skill' | 'social' | 'milestone' | 'streak' | 'creativity';
-
-export interface LessonCompletionData {
-  lessonId: string;
-  score: number;
-  xpEarned: number;
-  timeSpent: number;
-  attempts: Record<string, number>;
-  completedAt: string;
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
 }
 
-export interface LessonStateCallback {
-  (state: {
-    currentContent: LessonContent | null;
-    progress: number;
-    score: number;
-    timeSpent: number;
-    isCompleted: boolean;
-  }): void;
-}
+// Re-export drawing types for convenience
+export * from '../types/drawing';

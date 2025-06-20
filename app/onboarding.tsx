@@ -24,7 +24,7 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { useUserProgress } from '../src/contexts/UserProgressContext';
 import { NavigationDebugger, ContextDebugger, useDebugMount } from '../src/utils/DebugUtils';
-import { SkillLevel } from '../src/types/index'; // FIXED: Import SkillLevel type
+import { SkillLevel } from '../src/types'; // FIXED: Import SkillLevel type from types
 import {
   Palette,
   BookOpen,
@@ -81,14 +81,14 @@ const onboardingSteps: OnboardingStep[] = [
   },
 ];
 
-// FIXED: Skill levels with proper SkillLevel type mapping
+// FIXED: Skill levels that map directly to SkillLevel type
 interface SkillLevelOption {
   id: string;
   title: string;
   subtitle: string;
   description: string;
   recommended: boolean;
-  skillLevel: SkillLevel; // FIXED: Map to proper SkillLevel type
+  skillLevel: SkillLevel; // Use the actual SkillLevel type
 }
 
 const skillLevels: SkillLevelOption[] = [
@@ -98,23 +98,23 @@ const skillLevels: SkillLevelOption[] = [
     subtitle: 'I\'ve never drawn before',
     description: 'Start with the absolute basics: holding a pencil, drawing lines, and simple shapes.',
     recommended: true,
-    skillLevel: 'beginner', // FIXED: Maps to valid SkillLevel
+    skillLevel: 'beginner', // FIXED: Direct mapping to SkillLevel
   },
   {
-    id: 'some-experience',
+    id: 'intermediate',
     title: 'Some Experience',
     subtitle: 'I can draw basic shapes',
     description: 'You know the basics but want to improve your technique and learn new skills.',
     recommended: false,
-    skillLevel: 'intermediate', // FIXED: Maps 'some-experience' to 'intermediate'
+    skillLevel: 'intermediate', // FIXED: Direct mapping to SkillLevel
   },
   {
-    id: 'intermediate',
+    id: 'advanced',
     title: 'Intermediate',
     subtitle: 'I can draw recognizable objects',
     description: 'You have drawing experience and want to refine your skills and learn advanced techniques.',
     recommended: false,
-    skillLevel: 'advanced', // FIXED: Maps to 'advanced' for consistency
+    skillLevel: 'advanced', // FIXED: Direct mapping to SkillLevel
   },
 ];
 
@@ -130,7 +130,7 @@ export default function OnboardingScreen() {
   const theme = useTheme();
   const { createUser, user } = useUserProgress();
   const [currentStep, setCurrentStep] = useState(0);
-  const [selectedSkillLevel, setSelectedSkillLevel] = useState('beginner'); // UI selection
+  const [selectedSkillLevel, setSelectedSkillLevel] = useState('beginner'); // UI selection ID
   const [selectedGoals, setSelectedGoals] = useState<string[]>(['hobby']);
   const [userName, setUserName] = useState('');
   const [isCreatingUser, setIsCreatingUser] = useState(false);
@@ -190,7 +190,7 @@ export default function OnboardingScreen() {
       setIsCreatingUser(true);
       NavigationDebugger.log('Starting user creation', {
         displayName: userName || 'New Artist',
-        skillLevel: getSelectedSkillLevelType(), // FIXED: Use proper SkillLevel type
+        skillLevel: getSelectedSkillLevelType(),
         goals: selectedGoals,
       });
 
@@ -198,14 +198,11 @@ export default function OnboardingScreen() {
       await createUser({
         displayName: userName || 'New Artist',
         email: `${(userName || 'newartist').toLowerCase().replace(/\s+/g, '')}@pikaso.app`,
-        skillLevel: getSelectedSkillLevelType(), // FIXED: Use proper SkillLevel type
+        skillLevel: getSelectedSkillLevelType(), // FIXED: This now returns proper SkillLevel
         learningGoals: selectedGoals,
       });
       
       ContextDebugger.log('UserProgress', 'User created successfully');
-      
-      // Store additional onboarding preferences
-      // This will be handled by the context internally
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       

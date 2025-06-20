@@ -1,7 +1,6 @@
 // src/engines/core/PerformanceMonitor.ts - ENTERPRISE PERFORMANCE MONITORING
 
 import { EventBus } from './EventBus';
-import { PerformanceMetrics } from '../../types';
 
 /**
  * ENTERPRISE PERFORMANCE MONITORING SYSTEM
@@ -14,6 +13,16 @@ import { PerformanceMetrics } from '../../types';
  * - Performance alerts and optimization
  * - Historical performance data
  */
+
+export interface PerformanceMetrics {
+  fps: number;
+  frameTime: number;
+  memoryUsage: number;
+  drawCalls: number;
+  inputLatency: number;
+  renderTime: number;
+  timestamp: number;
+}
 
 interface PerformanceConfig {
   enableMonitoring: boolean;
@@ -52,7 +61,7 @@ class PerformanceMonitor {
   private static instance: PerformanceMonitor;
   private eventBus: EventBus;
   private config: PerformanceConfig;
-  private isMonitoring: boolean = false;
+  private monitoring: boolean = false; // FIXED: Renamed to avoid conflict
   private monitoringInterval: NodeJS.Timeout | null = null;
   private performanceHistory: PerformanceMetrics[] = [];
   private frameCount: number = 0;
@@ -75,13 +84,13 @@ class PerformanceMonitor {
   // =================== MONITORING CONTROL ===================
 
   public startMonitoring(config?: Partial<PerformanceConfig>): void {
-    if (this.isMonitoring) {
+    if (this.monitoring) {
       console.warn('Performance monitoring already active');
       return;
     }
 
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.isMonitoring = true;
+    this.monitoring = true;
     this.frameCount = 0;
     this.lastFrameTime = performance.now();
 
@@ -96,11 +105,11 @@ class PerformanceMonitor {
   }
 
   public stopMonitoring(): void {
-    if (!this.isMonitoring) {
+    if (!this.monitoring) {
       return;
     }
 
-    this.isMonitoring = false;
+    this.monitoring = false;
     
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
@@ -111,14 +120,15 @@ class PerformanceMonitor {
     this.eventBus.emit('performance:monitoring_stopped');
   }
 
+  // FIXED: Single isMonitoring method
   public isMonitoring(): boolean {
-    return this.isMonitoring;
+    return this.monitoring;
   }
 
   // =================== METRICS COLLECTION ===================
 
   private collectMetrics(): void {
-    if (!this.isMonitoring) return;
+    if (!this.monitoring) return;
 
     try {
       const now = performance.now();
@@ -131,7 +141,7 @@ class PerformanceMonitor {
         drawCalls: this.getDrawCalls(),
         inputLatency: this.getInputLatency(),
         renderTime: this.getRenderTime(),
-        timestamp: Date.now(), // FIXED: Use Date.now() instead of new Date()
+        timestamp: Date.now(),
       };
 
       this.currentMetrics = metrics;
@@ -163,12 +173,12 @@ class PerformanceMonitor {
 
   private getMemoryUsage(): number {
     try {
-      // React Native specific memory usage
-      if (typeof global !== 'undefined' && global.performance && global.performance.memory) {
-        return global.performance.memory.usedJSHeapSize / (1024 * 1024); // MB
+      // FIXED: Better memory usage detection for React Native
+      if (typeof performance !== 'undefined' && (performance as any).memory) {
+        return (performance as any).memory.usedJSHeapSize / (1024 * 1024); // MB
       }
       
-      // Fallback estimation
+      // Fallback estimation for React Native
       return Math.random() * 100 + 50; // Mock data for development
     } catch {
       return 0;
@@ -259,12 +269,12 @@ class PerformanceMonitor {
   // =================== FRAME TRACKING ===================
 
   public onFrameStart(): void {
-    if (!this.isMonitoring) return;
+    if (!this.monitoring) return;
     this.frameCount++;
   }
 
   public onFrameEnd(): void {
-    if (!this.isMonitoring) return;
+    if (!this.monitoring) return;
     // Frame tracking handled in collectMetrics
   }
 

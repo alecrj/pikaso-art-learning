@@ -1,32 +1,190 @@
 // src/engines/drawing/index.ts - ENTERPRISE DRAWING ENGINE EXPORTS
 
-// FIXED: Only export drawing-related modules
-export { ValkyrieEngine, valkyrieEngine } from './ValkyrieEngine';
-export { BrushEngine, brushEngine } from './BrushEngine';
-export { LayerManager, layerManager } from './LayerManager';
-export { ColorManager, colorManager } from './ColorManager';
-export { GestureRecognizer, gestureRecognizer } from './GestureRecognizer';
-export { TransformManager, transformManager } from './TransformManager';
-export { PerformanceOptimizer, performanceOptimizer } from './PerformanceOptimizer';
+// FIXED: Clean exports without circular dependencies
+export { ValkyrieEngine } from './ValkyrieEngine';
+export { BrushEngine } from './BrushEngine';
+export { LayerManager } from './LayerManager';
+export { ColorManager } from './ColorManager';
+export { GestureRecognizer } from './GestureRecognizer';
+export { TransformManager } from './TransformManager';
+export { PerformanceOptimizer } from './PerformanceOptimizer';
 export { ProfessionalCanvas } from './ProfessionalCanvas';
 
-// Type exports
+// Type exports from types/drawing.ts
 export type {
-  DrawingTool,
-  DrawingMode,
-  BlendMode,
-  BrushCategory,
-  BrushSettings,
-  Brush,
+  Point,
   Stroke,
+  Transform,
+  Bounds,
+  Color,
+  ColorHistory,
+  ColorPalette,
+  Gradient,
+  GradientStop,
+  ColorSpace,
+  ColorHarmony,
+  ColorPickerMode,
+  ColorProfile,
+  Tool,
+  BrushCategory,
+  Brush,
+  BrushSettings,
+  BrushShape,
+  BrushGrain,
+  BrushDynamics,
+  BrushRendering,
+  BrushColorDynamics,
+  WetMixSettings,
+  BrushBehavior,
+  BrushPreset,
+  LayerType,
+  BlendMode,
   Layer,
-  DrawingStats,
+  LayerTransform,
+  LayerGroup,
+  ClippingMask,
+  LayerEffect,
+  CanvasState,
   CanvasSettings,
-  HistoryEntry,
-  DrawingState
-} from '../../types';
+  GestureType,
+  GestureState,
+  GestureConfig,
+  Selection,
+  Document,
+  ExportSettings,
+  ReferenceImage,
+  SymmetryGuide,
+  TextLayer,
+  Shape
+} from '../../types/drawing';
 
-// FIXED: Create unified drawing engine for enterprise architecture
+// FIXED: Create singleton instances with proper error handling
+let valkyrieEngineInstance: any = null;
+let brushEngineInstance: any = null;
+let layerManagerInstance: any = null;
+let colorManagerInstance: any = null;
+let gestureRecognizerInstance: any = null;
+let transformManagerInstance: any = null;
+let performanceOptimizerInstance: any = null;
+
+// Safe instance getters with fallbacks
+export const getValkyrieEngine = () => {
+  if (!valkyrieEngineInstance) {
+    try {
+      const { ValkyrieEngine } = require('./ValkyrieEngine');
+      valkyrieEngineInstance = ValkyrieEngine.getInstance();
+    } catch (error) {
+      console.warn('ValkyrieEngine not available:', error);
+      valkyrieEngineInstance = createMockEngine('ValkyrieEngine');
+    }
+  }
+  return valkyrieEngineInstance;
+};
+
+export const getBrushEngine = () => {
+  if (!brushEngineInstance) {
+    try {
+      const { BrushEngine } = require('./BrushEngine');
+      brushEngineInstance = BrushEngine.getInstance();
+    } catch (error) {
+      console.warn('BrushEngine not available:', error);
+      brushEngineInstance = createMockEngine('BrushEngine');
+    }
+  }
+  return brushEngineInstance;
+};
+
+export const getLayerManager = () => {
+  if (!layerManagerInstance) {
+    try {
+      const { LayerManager } = require('./LayerManager');
+      layerManagerInstance = LayerManager.getInstance();
+    } catch (error) {
+      console.warn('LayerManager not available:', error);
+      layerManagerInstance = createMockEngine('LayerManager');
+    }
+  }
+  return layerManagerInstance;
+};
+
+export const getColorManager = () => {
+  if (!colorManagerInstance) {
+    try {
+      const { ColorManager } = require('./ColorManager');
+      colorManagerInstance = ColorManager.getInstance();
+    } catch (error) {
+      console.warn('ColorManager not available:', error);
+      colorManagerInstance = createMockEngine('ColorManager');
+    }
+  }
+  return colorManagerInstance;
+};
+
+export const getGestureRecognizer = () => {
+  if (!gestureRecognizerInstance) {
+    try {
+      const { GestureRecognizer } = require('./GestureRecognizer');
+      gestureRecognizerInstance = GestureRecognizer.getInstance();
+    } catch (error) {
+      console.warn('GestureRecognizer not available:', error);
+      gestureRecognizerInstance = createMockEngine('GestureRecognizer');
+    }
+  }
+  return gestureRecognizerInstance;
+};
+
+export const getTransformManager = () => {
+  if (!transformManagerInstance) {
+    try {
+      const { TransformManager } = require('./TransformManager');
+      transformManagerInstance = TransformManager.getInstance();
+    } catch (error) {
+      console.warn('TransformManager not available:', error);
+      transformManagerInstance = createMockEngine('TransformManager');
+    }
+  }
+  return transformManagerInstance;
+};
+
+export const getPerformanceOptimizer = () => {
+  if (!performanceOptimizerInstance) {
+    try {
+      const { PerformanceOptimizer } = require('./PerformanceOptimizer');
+      performanceOptimizerInstance = PerformanceOptimizer.getInstance();
+    } catch (error) {
+      console.warn('PerformanceOptimizer not available:', error);
+      performanceOptimizerInstance = createMockEngine('PerformanceOptimizer');
+    }
+  }
+  return performanceOptimizerInstance;
+};
+
+// FIXED: Export consistent instance references
+export const valkyrieEngine = getValkyrieEngine();
+export const brushEngine = getBrushEngine();
+export const layerManager = getLayerManager();
+export const colorManager = getColorManager();
+export const gestureRecognizer = getGestureRecognizer();
+export const transformManager = getTransformManager();
+export const performanceOptimizer = getPerformanceOptimizer();
+
+// Mock engine creator for development
+function createMockEngine(name: string) {
+  return {
+    name,
+    initialize: async () => {
+      console.log(`Mock ${name} initialized`);
+      return true;
+    },
+    cleanup: async () => {
+      console.log(`Mock ${name} cleaned up`);
+    },
+    isReady: () => true,
+    isInitialized: () => true,
+  };
+}
+
+// FIXED: Unified drawing engine for enterprise architecture
 class DrawingEngine {
   private static instance: DrawingEngine;
 
@@ -41,19 +199,21 @@ class DrawingEngine {
 
   public async initialize(): Promise<boolean> {
     try {
-      // Initialize ValkyrieEngine if it has an init method
-      if (valkyrieEngine && typeof valkyrieEngine.initialize === 'function') {
-        await valkyrieEngine.initialize();
-      }
+      // Initialize all drawing engines
+      const engines = [
+        getValkyrieEngine(),
+        getBrushEngine(),
+        getLayerManager(),
+        getColorManager(),
+        getGestureRecognizer(),
+        getTransformManager(),
+        getPerformanceOptimizer(),
+      ];
 
-      // Initialize brush engine
-      if (brushEngine && typeof brushEngine.initialize === 'function') {
-        await brushEngine.initialize();
-      }
-
-      // Initialize layer manager
-      if (layerManager && typeof layerManager.initialize === 'function') {
-        await layerManager.initialize();
+      for (const engine of engines) {
+        if (engine && typeof engine.initialize === 'function') {
+          await engine.initialize();
+        }
       }
 
       console.log('🎨 Drawing Engine initialized successfully');
@@ -65,12 +225,16 @@ class DrawingEngine {
   }
 
   public isReady(): boolean {
-    // FIXED: Check for actual engine instances without undefined references
     try {
-      return !!(
-        typeof valkyrieEngine !== 'undefined' && 
-        typeof brushEngine !== 'undefined' && 
-        typeof layerManager !== 'undefined'
+      const engines = [
+        getValkyrieEngine(),
+        getBrushEngine(),
+        getLayerManager(),
+        getColorManager(),
+      ];
+
+      return engines.every(engine => engine && 
+        (typeof engine.isReady === 'function' ? engine.isReady() : true)
       );
     } catch {
       return false;
@@ -79,13 +243,20 @@ class DrawingEngine {
 
   public async cleanup(): Promise<void> {
     try {
-      // Cleanup drawing engines
-      if (valkyrieEngine && typeof valkyrieEngine.cleanup === 'function') {
-        await valkyrieEngine.cleanup();
-      }
-      
-      if (brushEngine && typeof brushEngine.cleanup === 'function') {
-        await brushEngine.cleanup();
+      const engines = [
+        getValkyrieEngine(),
+        getBrushEngine(),
+        getLayerManager(),
+        getColorManager(),
+        getGestureRecognizer(),
+        getTransformManager(),
+        getPerformanceOptimizer(),
+      ];
+
+      for (const engine of engines) {
+        if (engine && typeof engine.cleanup === 'function') {
+          await engine.cleanup();
+        }
       }
       
       console.log('🧹 Drawing Engine cleaned up');
@@ -94,24 +265,25 @@ class DrawingEngine {
     }
   }
 
+  // Convenience getters
   public getValkyrieEngine() {
-    return valkyrieEngine;
+    return getValkyrieEngine();
   }
 
   public getBrushEngine() {
-    return brushEngine;
+    return getBrushEngine();
   }
 
   public getLayerManager() {
-    return layerManager;
+    return getLayerManager();
   }
 
   public getColorManager() {
-    return colorManager;
+    return getColorManager();
   }
 
   public getPerformanceOptimizer() {
-    return performanceOptimizer;
+    return getPerformanceOptimizer();
   }
 }
 
@@ -122,40 +294,3 @@ export { DrawingEngine };
 export async function initializeDrawingEngine(): Promise<boolean> {
   return drawingEngine.initialize();
 }
-
-// FIXED: Create mock engines if they don't exist yet (for development)
-export const valkyrieEngine = (() => {
-  try {
-    return require('./ValkyrieEngine').valkyrieEngine;
-  } catch {
-    return {
-      initialize: async () => true,
-      cleanup: async () => {},
-      isReady: () => true,
-    };
-  }
-})();
-
-export const brushEngine = (() => {
-  try {
-    return require('./BrushEngine').brushEngine;
-  } catch {
-    return {
-      initialize: async () => true,
-      cleanup: async () => {},
-      isReady: () => true,
-    };
-  }
-})();
-
-export const layerManager = (() => {
-  try {
-    return require('./LayerManager').layerManager;
-  } catch {
-    return {
-      initialize: async () => true,
-      cleanup: async () => {},
-      isReady: () => true,
-    };
-  }
-})();
