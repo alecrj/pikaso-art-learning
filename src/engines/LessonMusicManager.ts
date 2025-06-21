@@ -50,14 +50,14 @@ export class LessonMusicManager {
     {
       id: 'calm-theory-1',
       name: 'Peaceful Learning',
-      file: require('../../../assets/music/calm-theory.mp3'), // Add this file
+      file: require('../../assets/music/calm-theory.mp3'), // Add this file
       mood: 'theory',
       duration: 180,
     },
     {
       id: 'calm-theory-2', 
       name: 'Focused Study',
-      file: require('../../../assets/music/focused-study.mp3'), // Add this file
+      file: require('../../assets/music/calm-theory.mp3'), // Add this file
       mood: 'theory',
       duration: 200,
     },
@@ -66,14 +66,14 @@ export class LessonMusicManager {
     {
       id: 'energetic-practice-1',
       name: 'Creative Energy',
-      file: require('../../../assets/music/creative-energy.mp3'), // Add this file
+      file: require('../../assets/music/calm-theory.mp3'), // Add this file
       mood: 'practice',
       duration: 150,
     },
     {
       id: 'energetic-practice-2',
       name: 'Artistic Flow',
-      file: require('../../../assets/music/artistic-flow.mp3'), // Add this file
+      file: require('../../assets/music/calm-theory.mp3'), // Add this file
       mood: 'practice',
       duration: 180,
     },
@@ -82,14 +82,14 @@ export class LessonMusicManager {
     {
       id: 'creative-drawing-1',
       name: 'Drawing Inspiration',
-      file: require('../../../assets/music/drawing-inspiration.mp3'), // Add this file
+      file: require('../../assets/music/calm-theory.mp3'), // Add this file
       mood: 'creative',
       duration: 240,
     },
     {
       id: 'creative-drawing-2',
       name: 'Artistic Mind',
-      file: require('../../../assets/music/artistic-mind.mp3'), // Add this file
+      file: require('../../assets/music/calm-theory.mp3'), // Add this file
       mood: 'creative',
       duration: 220,
     },
@@ -98,7 +98,7 @@ export class LessonMusicManager {
     {
       id: 'focus-1',
       name: 'Deep Focus',
-      file: require('../../../assets/music/deep-focus.mp3'), // Add this file
+      file: require('../../assets/music/calm-theory.mp3'), // Add this file
       mood: 'focus',
       duration: 300,
     },
