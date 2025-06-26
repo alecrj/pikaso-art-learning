@@ -1,38 +1,26 @@
 {
   "expo": {
     "name": "Pikaso",
-    "slug": "Pikaso",
+    "slug": "pikaso-art-learning",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "platforms": ["ios", "android", "web"],
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "scheme": "pikaso",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "requireFullScreen": false,
-      "infoPlist": {
-        "CADisableMinimumFrameDurationOnPhone": true
-      },
-      "bundleIdentifier": "com.anonymous.Pikaso"
+      "bundleIdentifier": "com.pikaso.artlearning"
     },
     "android": {
+      "package": "com.pikaso.artlearning",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true
+        "backgroundColor": "#FFFFFF"
+      }
     },
     "web": {
+      "bundler": "metro",
       "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      "expo-router"
-    ]
+    }
   }
 }

@@ -4,13 +4,14 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
-    "build:web": "npx expo export --platform web",
-    "deploy": "npm run build:web && npx vercel --prod",
-    "type-check": "echo 'TypeScript check skipped for velocity'",
-    "test": "echo 'Testing skipped for rapid deployment'"
+    "clean": "rm -rf node_modules .expo ios/build android/build",
+    "reset": "npm run clean && npm install && npm start -- --clear",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "test:drawing": "jest src/engines/drawing --watch"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.1.2",
@@ -19,13 +20,11 @@
     "@react-navigation/native": "^7.1.6",
     "@react-navigation/stack": "^7.3.3",
     "@shopify/react-native-skia": "v2.0.0-next.4",
-    "crypto-js": "^4.2.0",
     "expo": "53.0.12",
     "expo-av": "~15.1.6",
     "expo-blur": "^14.1.5",
-    "expo-dev-client": "~5.2.1",
     "expo-file-system": "~18.1.10",
-    "expo-haptics": "~12.8.0",
+    "expo-haptics": "~14.1.4",
     "expo-linear-gradient": "~14.1.5",
     "expo-media-library": "^17.1.7",
     "expo-router": "~5.1.0",
@@ -39,13 +38,12 @@
     "react-native-gesture-handler": "~2.24.0",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-reanimated": "~3.17.4",
-    "react-native-safe-area-context": "^4.14.1",
     "react-native-svg": "15.11.2",
-    "react-native-web": "^0.20.0"
+    "react-native-web": "^0.20.0",
+    "expo-dev-client": "~5.2.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
-    "@expo/cli": "^0.24.15",
     "@react-native-community/cli": "^18.0.0",
     "@types/react": "~19.0.10",
     "typescript": "~5.8.3"

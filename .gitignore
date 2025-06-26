@@ -35,3 +35,17 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Testing
+coverage/
+*.lcov
+
+# Monitoring
+logs/
+metrics/
+reports/
+
+# Environment
+.env.local
+.env.production
+.vercel
